@@ -493,6 +493,12 @@ button {
 }
 .sidebar {
   width: 246px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  flex-shrink: 0;
+  overflow-y: auto;
   background: #25222e;
   color: #fcfbff;
   padding: 28px 18px;
