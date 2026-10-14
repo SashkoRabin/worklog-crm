@@ -15,11 +15,29 @@ create table public.shifts (
   hours numeric not null check (hours >= 0),
   hourly_rate numeric not null check (hourly_rate >= 0),
   notes text,
+  source text not null default 'manual' check (source in ('manual', 'connecteam')),
+  external_id text,
   created_at timestamptz not null default now()
+);
+
+create unique index shifts_connecteam_external_id
+  on public.shifts (user_id, source, external_id)
+  where external_id is not null;
+
+-- The value is AES-GCM encrypted before insertion. RLS limits each encrypted
+-- connection record to its owner; the cleartext link never reaches the browser.
+create table public.connecteam_connections (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  calendar_url_encrypted text not null,
+  last_synced_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 alter table public.profiles enable row level security;
 alter table public.shifts enable row level security;
+alter table public.connecteam_connections enable row level security;
+create policy "Own encrypted Connecteam connection" on public.connecteam_connections for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "Own profile" on public.profiles for all using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
 create policy "Own shifts" on public.shifts for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 

@@ -22,6 +22,7 @@ import {
   Clock3,
   Globe2,
   LogOut,
+  Link2,
   MapPin,
   Moon,
   Plus,
@@ -32,8 +33,14 @@ import {
 } from "lucide-react";
 import { stores } from "@/lib/stores";
 import { supabase } from "@/lib/supabase";
-import { copy, Lang, locales, money, Shift } from "@/lib/worklog";
+import { copy, isWorkedShift, Lang, locales, money, Shift } from "@/lib/worklog";
 import { MobileNav } from "@/components/mobile-nav";
+
+const connecteamText = {
+  en: { title: "Connecteam", intro: "Paste your personal Calendar Sync link. Planned shifts never affect earnings until you add actual hours.", link: "Personal calendar link", connect: "Connect & sync", sync: "Sync now", syncing: "Syncing…", disconnect: "Disconnect", connected: "Connected", planned: "Planned" },
+  ru: { title: "Connecteam", intro: "Вставьте личную ссылку Calendar Sync. Запланированные смены не влияют на доход, пока вы не добавите фактические часы.", link: "Личная ссылка календаря", connect: "Подключить и синхронизировать", sync: "Синхронизировать", syncing: "Синхронизация…", disconnect: "Отключить", connected: "Подключено", planned: "Запланировано" },
+  cs: { title: "Connecteam", intro: "Vložte osobní odkaz Calendar Sync. Plánované směny neovlivní výdělek, dokud nezadáte skutečné hodiny.", link: "Osobní odkaz kalendáře", connect: "Připojit a synchronizovat", sync: "Synchronizovat", syncing: "Synchronizace…", disconnect: "Odpojit", connected: "Připojeno", planned: "Plánováno" },
+} as const;
 
 const current = new Date(),
   today = format(current, "yyyy-MM-dd");
@@ -124,7 +131,7 @@ export default function Home() {
     [shifts, setShifts] = useState<Shift[]>(demo),
     [rate, setRate] = useState(150),
     [month, setMonth] = useState(current),
-    [dialog, setDialog] = useState<"shift" | "settings" | "quick" | null>(null),
+    [dialog, setDialog] = useState<"shift" | "settings" | "quick" | "connecteam" | null>(null),
     [date, setDate] = useState(today),
     [editing, setEditing] = useState<Shift | null>(null);
   const t = copy[lang];
@@ -169,13 +176,14 @@ export default function Home() {
         shifts.filter((shift) => isSameMonth(parseISO(shift.work_date), month)),
       [shifts, month],
     ),
-    hours = own.reduce((sum, shift) => sum + shift.hours, 0),
-    earned = own.reduce(
+    actualOwn = own.filter((shift) => isWorkedShift(shift)),
+    hours = actualOwn.reduce((sum, shift) => sum + shift.hours, 0),
+    earned = actualOwn.reduce(
       (sum, shift) => sum + shift.hours * shift.hourly_rate,
       0,
     ),
     byStore = Object.entries(
-      own.reduce<Record<string, number>>(
+      actualOwn.reduce<Record<string, number>>(
         (all, shift) => ({
           ...all,
           [shift.store]: (all[shift.store] || 0) + shift.hours,
@@ -198,6 +206,7 @@ export default function Home() {
         hours: Number(values.get("hours")),
         hourly_rate: rate,
         notes: String(values.get("note")),
+        source: "manual" as const,
       };
     if (editing) {
       setShifts((all) =>
@@ -211,10 +220,24 @@ export default function Home() {
       const newShift = { ...row, id: crypto.randomUUID() };
       setShifts((all) => [newShift, ...all]);
       if (supabase && user)
-        await supabase.from("shifts").insert({ ...row, user_id: user.id });
+        await supabase
+          .from("shifts")
+          .insert({ ...newShift, user_id: user.id });
     }
     setDialog(null);
     setEditing(null);
+  }
+  async function deleteShift(shift: Shift) {
+    setShifts((all) => all.filter((item) => item.id !== shift.id));
+    setDialog(null);
+    setEditing(null);
+    if (supabase && user) {
+      const { error } = await supabase.from("shifts").delete().eq("id", shift.id);
+      if (error) {
+        setShifts((all) => [shift, ...all]);
+        console.error("Unable to delete shift", error);
+      }
+    }
   }
   return (
     <main className={`app-shell ${theme === "dark" ? "theme-dark" : ""}`}>
@@ -290,7 +313,7 @@ export default function Home() {
             icon={<Clock3 />}
             label={t.worked}
             value={`${hours} h`}
-            caption={`${own.length} ${t.shifts}`}
+            caption={`${actualOwn.length} ${t.shifts}`}
           />
           <Metric
             icon={<MapPin />}
@@ -347,7 +370,7 @@ export default function Home() {
                   key={day.toString()}
                   onClick={() => {
                     setDate(format(day, "yyyy-MM-dd"));
-                    setEditing(daily[0] || null);
+                    setEditing(daily[0]?.source === "connecteam" ? null : daily[0] || null);
                     setDialog("shift");
                   }}
                 >
@@ -355,10 +378,14 @@ export default function Home() {
                   {daily.length
                     ? daily.slice(0, 2).map((shift) => (
                         <span
-                          className={`event ${shift.shift_type}`}
+                          className={`event ${isWorkedShift(shift) ? "worked" : "upcoming"}`}
                           key={shift.id}
                         >
-                          {shift.store} · {shift.hours} h
+                          <span className="event-title">{shift.store} · {shift.hours} h</span>
+                          <span className="event-meta">
+                            {isWorkedShift(shift) ? t.workedType : t.upcoming} · {shift.source === "connecteam" ? t.connecteam : t.manual}
+                            {shift.notes && ` · ${shift.notes}`}
+                          </span>
                         </span>
                       ))
                     : isPast && <span className="off-label">{t.dayOff}</span>}
@@ -394,14 +421,8 @@ export default function Home() {
                   <b>{shift.store}</b>
                   <span>{shift.shift_name}</span>
                 </div>
-                <span className={`pill ${shift.shift_type}`}>
-                  {
-                    t[
-                      shift.shift_type === "worked"
-                        ? "workedType"
-                        : shift.shift_type
-                    ]
-                  }
+                <span className={`pill ${isWorkedShift(shift) ? "worked" : "assigned"}`}>
+                  {isWorkedShift(shift) ? t.workedType : t.upcoming}
                 </span>
                 <span className="shift-hours">{shift.hours} h</span>
                 <b className="shift-money">
@@ -410,11 +431,7 @@ export default function Home() {
                 <button
                   className="delete"
                   aria-label="Delete shift"
-                  onClick={() =>
-                    setShifts((all) =>
-                      all.filter((item) => item.id !== shift.id),
-                    )
-                  }
+                  onClick={() => deleteShift(shift)}
                 >
                   <X size={16} />
                 </button>
@@ -466,6 +483,11 @@ export default function Home() {
             <button type="button" className="setting-link" onClick={() => setDialog("settings")}>
               {t.changeRate}
             </button>
+            <button type="button" className="connecteam-cta compact" onClick={() => setDialog("connecteam")}>
+              <Link2 />
+              <span><b>{connecteamText[lang].title}</b><small>Calendar Sync</small></span>
+              <span aria-hidden="true">→</span>
+            </button>
           </section>
         </div>
       )}
@@ -495,10 +517,21 @@ export default function Home() {
                 {t.rate}
                 <input name="rate" type="number" min="0" defaultValue={rate} />
               </label>
+              <button type="button" className="connecteam-cta" onClick={() => setDialog("connecteam")}>
+                <span className="connecteam-cta-icon"><Link2 /></span>
+                <span>
+                  <b>{connecteamText[lang].title}</b>
+                  <small>{connecteamText[lang].planned}</small>
+                </span>
+                <span className="connecteam-cta-arrow" aria-hidden="true">→</span>
+              </button>
               <button className="primary full">{t.save}</button>
             </div>
           </form>
         </div>
+      )}
+      {dialog === "connecteam" && (
+        <ConnecteamDialog lang={lang} onClose={() => setDialog(null)} onSynced={() => window.location.reload()} />
       )}
       {dialog === "shift" && (
         <ShiftDialog
@@ -507,9 +540,98 @@ export default function Home() {
           date={date}
           onClose={() => setDialog(null)}
           onSave={saveShift}
+          onDelete={deleteShift}
         />
       )}
     </main>
+  );
+}
+
+function ConnecteamDialog({
+  lang,
+  onClose,
+  onSynced,
+}: {
+  lang: Lang;
+  onClose: () => void;
+  onSynced: () => void;
+}) {
+  const text = connecteamText[lang];
+  const [url, setUrl] = useState("");
+  const [connected, setConnected] = useState(false);
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    fetch("/api/connecteam/sync")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.code === "SETUP_REQUIRED") throw new Error("CONNECTEAM_SETUP_REQUIRED");
+        if (data.connected) {
+          setConnected(true);
+          setLastSynced(data.lastSyncedAt);
+        }
+      })
+      .catch((reason) => setError(reason instanceof Error && reason.message === "CONNECTEAM_SETUP_REQUIRED" ? "Подключение пока не настроено на сервере. Добавьте серверные переменные из README — после этого ссылка будет синхронизироваться." : "Не удалось проверить подключение Connecteam."));
+  }, []);
+  async function sync(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPending(true);
+    setError("");
+    try {
+      const response = await fetch("/api/connecteam/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(url ? { calendarUrl: url } : {}),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.code === "SETUP_REQUIRED" ? "CONNECTEAM_SETUP_REQUIRED" : data.error || "Unable to sync Connecteam.");
+      setConnected(true);
+      setLastSynced(new Date().toISOString());
+      setUrl("");
+      onSynced();
+    } catch (reason) {
+      setError(reason instanceof Error && reason.message === "CONNECTEAM_SETUP_REQUIRED" ? "Серверная часть Connecteam ещё не настроена. Добавьте SUPABASE_SERVICE_ROLE_KEY и CONNECTEAM_ENCRYPTION_KEY в .env.local или переменные деплоя." : reason instanceof Error ? reason.message : "Не удалось синхронизировать Connecteam.");
+    } finally {
+      setPending(false);
+    }
+  }
+  async function disconnect() {
+    setPending(true);
+    setError("");
+    try {
+      const response = await fetch("/api/connecteam/sync", { method: "DELETE" });
+      if (!response.ok) throw new Error("Unable to disconnect Connecteam.");
+      setConnected(false);
+      setLastSynced(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to disconnect Connecteam.");
+    } finally {
+      setPending(false);
+    }
+  }
+  return (
+    <div className="overlay" onMouseDown={onClose}>
+      <form className="dialog connecteam-dialog" onMouseDown={(event) => event.stopPropagation()} onSubmit={sync}>
+        <button type="button" className="close" onClick={onClose} aria-label="Close"><X /></button>
+        <div className="dialog-body">
+          <p className="eyebrow">{text.title}</p>
+          <h2>{connected ? text.connected : text.title}</h2>
+          <p>{text.intro}</p>
+          {connected ? (
+            <p className="connection-status">{lastSynced ? `${text.connected} · ${new Date(lastSynced).toLocaleString()}` : text.connected}</p>
+          ) : (
+            <label>
+              {text.link}
+              <input value={url} onChange={(event) => setUrl(event.target.value)} type="url" placeholder="https://…" required />
+            </label>
+          )}
+          {error && <p className="error">{error}</p>}
+          <button className="primary full" disabled={pending}>{pending ? text.syncing : connected ? text.sync : text.connect}</button>
+          {connected && <button type="button" className="disconnect" onClick={disconnect} disabled={pending}>{text.disconnect}</button>}
+        </div>
+      </form>
+    </div>
   );
 }
 
@@ -519,12 +641,14 @@ function ShiftDialog({
   date,
   onClose,
   onSave,
+  onDelete,
 }: {
   t: (typeof copy)[Lang];
   editing: Shift | null;
   date: string;
   onClose: () => void;
   onSave: (event: FormEvent<HTMLFormElement>) => void;
+  onDelete: (shift: Shift) => void;
 }) {
   const initialStore =
     stores.find((store) => store.name === editing?.store) || stores[0];
@@ -639,6 +763,15 @@ function ShiftDialog({
             <input name="note" defaultValue={editing?.notes || ""} />
           </label>
           <button className="primary full">{t.saveShift}</button>
+          {editing?.source !== "connecteam" && editing && (
+            <button
+              type="button"
+              className="delete-shift"
+              onClick={() => onDelete(editing)}
+            >
+              {t.deleteShift}
+            </button>
+          )}
         </div>
       </form>
     </div>

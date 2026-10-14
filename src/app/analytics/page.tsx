@@ -15,7 +15,7 @@ import {
   TrendingUp,
   WalletCards,
 } from "lucide-react";
-import { copy, Lang, locales, money, Shift } from "@/lib/worklog";
+import { copy, isWorkedShift, Lang, locales, money, Shift } from "@/lib/worklog";
 import { supabase } from "@/lib/supabase";
 import { MobileNav } from "@/components/mobile-nav";
 
@@ -137,8 +137,9 @@ export default function Analytics() {
     document.cookie = `worklog-theme=${theme}; Path=/; Max-Age=31536000; SameSite=Lax`;
     document.documentElement.dataset.theme = theme;
   }, [theme]);
-  const current = shifts.filter((s) => isSameMonth(parseISO(s.work_date), now)),
-    previous = shifts.filter((s) =>
+  const actualShifts = shifts.filter((shift) => isWorkedShift(shift)),
+    current = actualShifts.filter((s) => isSameMonth(parseISO(s.work_date), now)),
+    previous = actualShifts.filter((s) =>
       isSameMonth(parseISO(s.work_date), subMonths(now, 1)),
     );
   const currentHours = current.reduce((sum, s) => sum + s.hours, 0),
@@ -161,7 +162,7 @@ export default function Analytics() {
     now,
   ].map((month) => ({
     label: format(month, "MMM", { locale: locales[lang] }),
-    hours: shifts
+    hours: actualShifts
       .filter((s) => isSameMonth(parseISO(s.work_date), month))
       .reduce((sum, s) => sum + s.hours, 0),
   }));
