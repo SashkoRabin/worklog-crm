@@ -783,6 +783,13 @@ h2 {
   height: 2px;
   opacity: 0.74;
 }
+.calendar-card .day.has-note {
+  background: linear-gradient(145deg, #fffdf1, #fff2ad);
+  border-color: #f0ce55;
+}
+.calendar-card .day.has-note:before {
+  background: linear-gradient(90deg, #e1ad17, #f4d767);
+}
 .theme-dark .calendar-card .event,
 .theme-dark .calendar-card .event.replacement,
 .theme-dark .calendar-card .event.assigned,
@@ -1325,6 +1332,10 @@ h2 {
   .calendar-card .event.upcoming {
     background: #16846e;
   }
+  .calendar-card .day.has-note {
+    background: #fff2a8;
+    border-color: #ebbf35;
+  }
   .off-label {
     display: none;
   }
@@ -1478,6 +1489,7 @@ h2 {
     display: flex;
     align-items: end;
     padding: 0;
+    z-index: 10;
   }
   .mobile-sheet {
     width: 100%;
@@ -1647,6 +1659,10 @@ h2 {
 .theme-dark .calendar-card .day.workday {
   background: linear-gradient(145deg, #2b263a, #252132);
   border-color: #4b435e;
+}
+.theme-dark .calendar-card .day.has-note {
+  background: linear-gradient(145deg, #554419, #403314);
+  border-color: #9a7420;
 }
 .theme-dark .calendar-card .day.workday:before {
   background: linear-gradient(90deg, #917cff, #b6aaff);

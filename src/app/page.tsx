@@ -362,11 +362,12 @@ export default function Home() {
               const daily = own.filter((shift) =>
                   isSameDay(parseISO(shift.work_date), day),
                 ),
+                hasNote = daily.some((shift) => Boolean(shift.notes?.trim())),
                 isPast = day < new Date(new Date().setHours(0, 0, 0, 0)),
                 isToday = isSameDay(day, new Date());
               return (
                 <button
-                  className={`day ${daily.length ? "workday" : isPast ? "day-off" : ""} ${isToday ? "today" : ""}`}
+                  className={`day ${daily.length ? "workday" : isPast ? "day-off" : ""} ${hasNote ? "has-note" : ""} ${isToday ? "today" : ""}`}
                   key={day.toString()}
                   onClick={() => {
                     setDate(format(day, "yyyy-MM-dd"));
