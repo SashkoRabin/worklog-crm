@@ -1248,6 +1248,9 @@ h2 {
   }
 }
 @media (max-width: 720px) {
+  .overlay {
+    z-index: 10;
+  }
   .sidebar {
     display: none;
   }
