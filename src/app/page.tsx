@@ -1,69 +1,22 @@
-import Image from "next/image";
-
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
-}
+"use client";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { addDays, eachDayOfInterval, endOfMonth, format, getDay, isSameDay, isSameMonth, parseISO, startOfMonth, subMonths } from "date-fns";
+import { cs } from "date-fns/locale";
+import { BarChart3, CalendarDays, ChevronLeft, ChevronRight, Clock3, LogOut, MapPin, Plus, Settings2, WalletCards, X } from "lucide-react";
+import { stores, shiftLabels } from "@/lib/stores";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+type Shift = { id:string; work_date:string; store:string; shift_name:string; shift_type:keyof typeof shiftLabels; hours:number; hourly_rate:number; notes?:string|null };
+const initialDate=new Date(2026,9,14),money=(n:number)=>new Intl.NumberFormat("cs-CZ",{style:"currency",currency:"CZK",maximumFractionDigits:0}).format(n), today=format(initialDate,"yyyy-MM-dd");
+const demo:Shift[]=[{id:"1",work_date:today,store:"Narodni",shift_name:"День · 10:00–17:30",shift_type:"worked",hours:7.5,hourly_rate:150},{id:"2",work_date:format(addDays(initialDate,-3),"yyyy-MM-dd"),store:"Karlova",shift_name:"Вечер · 17:30–01:00",shift_type:"replacement",hours:7.5,hourly_rate:150},{id:"3",work_date:format(addDays(initialDate,-7),"yyyy-MM-dd"),store:"Karlin",shift_name:"Весь день · 10:00–22:00",shift_type:"worked",hours:12,hourly_rate:150}];
+export default function Home(){const[user,setUser]=useState<{id:string;email?:string}|null>(null),[loading,setLoading]=useState(true),[mode,setMode]=useState<"login"|"signup">("login"),[error,setError]=useState(""),[shifts,setShifts]=useState<Shift[]>([]),[rate,setRate]=useState(150),[month,setMonth]=useState(initialDate),[dialog,setDialog]=useState<"shift"|"settings"|null>(null),[toast,setToast]=useState("");
+const load=async(id:string)=>{if(!supabase){setShifts(demo);return}const[{data:saved},{data:profile}]=await Promise.all([supabase.from("shifts").select("*").eq("user_id",id).order("work_date",{ascending:false}),supabase.from("profiles").select("hourly_rate").eq("id",id).single()]);setShifts((saved as Shift[])||[]);if(profile?.hourly_rate)setRate(Number(profile.hourly_rate))};
+useEffect(()=>{setMonth(new Date());(async()=>{if(!supabase){setLoading(false);return}const{data}=await supabase.auth.getUser();if(data.user){setUser(data.user);await load(data.user.id)}setLoading(false);const{data:listener}=supabase.auth.onAuthStateChange((_e,s)=>{const activeUser=s?.user;if(activeUser){setUser(activeUser);load(activeUser.id)}else{setUser(null);setShifts([])}});return()=>listener.subscription.unsubscribe()})()},[]);
+const monthly=useMemo(()=>shifts.filter(s=>isSameMonth(parseISO(s.work_date),month)),[shifts,month]), earned=monthly.reduce((x,s)=>x+s.hours*s.hourly_rate,0),hours=monthly.reduce((x,s)=>x+s.hours,0),byStore=useMemo(()=>Object.entries(monthly.reduce<Record<string,number>>((m,s)=>({...m,[s.store]:(m[s.store]||0)+s.hours}),{})).sort((a,b)=>b[1]-a[1]),[monthly]),days=eachDayOfInterval({start:startOfMonth(month),end:endOfMonth(month)});
+async function auth(e:FormEvent<HTMLFormElement>){e.preventDefault();const fd=new FormData(e.currentTarget),email=String(fd.get("email")),password=String(fd.get("password"));if(!supabase){setToast("Добавьте ключи Supabase в .env.local, чтобы включить вход.");return}const r=mode==="login"?await supabase.auth.signInWithPassword({email,password}):await supabase.auth.signUp({email,password});if(r.error)setError(r.error.message);else if(mode==="signup")setToast("Проверьте почту и подтвердите регистрацию.")}
+async function saveShift(data:Omit<Shift,"id"|"hourly_rate">){const record={...data,hourly_rate:rate,user_id:user?.id};if(user&&supabase){const{data:saved,error}=await supabase.from("shifts").insert(record).select().single();if(error){setToast(error.message);return}setShifts(p=>[saved as Shift,...p])}else setShifts(p=>[{...data,hourly_rate:rate,id:crypto.randomUUID()},...p]);setDialog(null)}
+if(loading)return <main className="loading"><div className="spinner"/></main>;if(!user)return <Auth mode={mode} setMode={setMode} error={error} onSubmit={auth} demo={!isSupabaseConfigured}/>;
+return <main className="app-shell"><aside className="sidebar"><div className="brand"><span className="brand-mark">W</span><span>Worklog</span></div><nav><a className="active"><CalendarDays/>Календарь</a><a><BarChart3/>Аналитика</a></nav><div className="sidebar-bottom"><button onClick={()=>setDialog("settings")}><Settings2/>Настройки</button><button onClick={()=>supabase?.auth.signOut()}><LogOut/>Выйти</button><small>{user.email}</small></div></aside><section className="content"><header><div><p className="eyebrow">МОЙ ГРАФИК</p><h1>Привет! Вот твой месяц</h1></div><button className="primary" onClick={()=>setDialog("shift")}><Plus/>Добавить смену</button></header>{toast&&<div className="toast">{toast}<button onClick={()=>setToast("")}><X size={16}/></button></div>}<div className="metrics"><Metric icon={<WalletCards/>} label="Заработано" value={money(earned)} caption={`за ${format(month,"LLLL",{locale:cs})}`}/><Metric icon={<Clock3/>} label="Отработано" value={`${hours.toFixed(hours%1?1:0)} ч`} caption={`${monthly.length} смен(ы)`}/><Metric icon={<MapPin/>} label="Основная точка" value={byStore[0]?.[0]||"—"} caption={byStore[0]?`${Math.round(byStore[0][1]/Math.max(hours,1)*100)}% всех часов`:"добавьте смену"}/></div><div className="main-grid"><section className="card calendar-card"><div className="card-head"><div><h2>{format(month,"LLLL yyyy",{locale:cs})}</h2><p>Нажмите на день, чтобы добавить смену</p></div><div className="month-nav"><button onClick={()=>setMonth(subMonths(month,1))}><ChevronLeft/></button><button onClick={()=>setMonth(addDays(endOfMonth(month),1))}><ChevronRight/></button></div></div><div className="weekdays">{["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].map(x=><span key={x}>{x}</span>)}</div><div className="calendar">{Array.from({length:(getDay(startOfMonth(month))+6)%7}).map((_,i)=><i key={i}/>)}{days.map(day=>{const daily=monthly.filter(s=>isSameDay(parseISO(s.work_date),day));return <button className={`day ${isSameDay(day,new Date())?"today":""}`} key={day.toString()} onClick={()=>setDialog("shift")}><b>{format(day,"d")}</b>{daily.slice(0,2).map(s=><span className={`event ${s.shift_type}`} key={s.id}>{s.store}</span>)}</button>})}</div></section><section className="card analytics"><div className="card-head"><div><h2>Распределение точек</h2><p>По отработанным часам</p></div></div>{byStore.length?<div className="bars">{byStore.slice(0,5).map(([name,h],i)=><div className="bar-row" key={name}><div><span>{name}</span><b>{Math.round(h/hours*100)}%</b></div><div className="track"><i style={{width:`${h/hours*100}%`,background:["#6750e8","#25a58f","#f0a54a","#ea6c72"][i]}}/></div><small>{h} ч</small></div>)}</div>:<Empty/>}</section></div><section className="card recent"><div className="card-head"><div><h2>Последние смены</h2><p>Ставка по умолчанию: {money(rate)}/ч</p></div><button className="link" onClick={()=>setDialog("settings")}>Изменить ставку</button></div>{shifts.length?shifts.slice(0,5).map(s=><div className="shift-row" key={s.id}><div className="date-box"><b>{format(parseISO(s.work_date),"dd")}</b><span>{format(parseISO(s.work_date),"MMM",{locale:cs})}</span></div><div className="shift-info"><b>{s.store}</b><span>{s.shift_name}</span></div><span className={`pill ${s.shift_type}`}>{shiftLabels[s.shift_type]}</span><span className="shift-hours">{s.hours} ч</span><b className="shift-money">{money(s.hours*s.hourly_rate)}</b><button className="delete" onClick={()=>setShifts(p=>p.filter(x=>x.id!==s.id))}><X size={16}/></button></div>):<Empty/>}</section></section>{dialog==="shift"&&<ShiftDialog rate={rate} onClose={()=>setDialog(null)} onSave={saveShift}/>} {dialog==="settings"&&<RateDialog rate={rate} onClose={()=>setDialog(null)} onSave={async n=>{setRate(n);if(user&&supabase)await supabase.from("profiles").upsert({id:user.id,hourly_rate:n});setDialog(null)}}/>}</main>}
+function Auth({mode,setMode,error,onSubmit,demo}:{mode:"login"|"signup";setMode:(x:"login"|"signup")=>void;error:string;onSubmit:(e:FormEvent<HTMLFormElement>)=>void;demo:boolean}){return <main className="auth"><section><div className="brand"><span className="brand-mark">W</span>Worklog</div><p className="eyebrow">УЧЁТ РАБОЧЕГО ВРЕМЕНИ</p><h1>Работа в ритме<br/><em>твоей жизни.</em></h1><p className="auth-copy">Смены, заработок и понятная аналитика — в одном спокойном месте.</p><div className="auth-card"><div className="tabs"><button className={mode==="login"?"chosen":""} onClick={()=>setMode("login")}>Вход</button><button className={mode==="signup"?"chosen":""} onClick={()=>setMode("signup")}>Регистрация</button></div><form onSubmit={onSubmit}><label>Email<input name="email" type="email" placeholder="you@example.com" required/></label><label>Пароль<input name="password" type="password" placeholder="Минимум 6 символов" minLength={6} required/></label>{error&&<p className="error">{error}</p>}<button className="primary full">{mode==="login"?"Войти":"Создать аккаунт"}</button></form>{demo&&<p className="setup-note">Режим предпросмотра. Подключите Supabase, чтобы включить регистрацию.</p>}</div></section><div className="auth-art"><div className="orb orb1"/><div className="orb orb2"/><div className="floating-card"><Clock3/><b>18.5 ч</b><span>на этой неделе</span></div></div></main>}
+function Metric({icon,label,value,caption}:{icon:React.ReactNode;label:string;value:string;caption:string}){return <div className="metric card"><span className="metric-icon">{icon}</span><p>{label}</p><h2>{value}</h2><small>{caption}</small></div>};function Empty(){return <div className="empty">Пока здесь пусто</div>}
+function RateDialog({rate,onSave,onClose}:{rate:number;onSave:(n:number)=>void;onClose:()=>void}){const[v,setV]=useState(rate);return <div className="overlay"><form className="dialog" onSubmit={e=>{e.preventDefault();onSave(v)}}><button type="button" className="close" onClick={onClose}><X/></button><p className="eyebrow">НАСТРОЙКИ</p><h2>Почасовая ставка</h2><p>Будет применяться к новым сменам.</p><label>Ставка, Kč / ч<input autoFocus type="number" min="0" value={v} onChange={e=>setV(Number(e.target.value))}/></label><button className="primary full">Сохранить</button></form></div>}
+function ShiftDialog({rate,onSave,onClose}:{rate:number;onSave:(s:Omit<Shift,"id"|"hourly_rate">)=>void;onClose:()=>void}){const[id,setId]=useState(stores[0].id),store=stores.find(s=>s.id===id)!,[idx,setIdx]=useState(0),[hours,setHours]=useState(store.shifts[0].hours);useEffect(()=>{setIdx(0);setHours(store.shifts[0].hours)},[id]);const sh=store.shifts[idx];return <div className="overlay"><form className="dialog shift-dialog" onSubmit={e=>{e.preventDefault();const fd=new FormData(e.currentTarget);onSave({work_date:String(fd.get("date")),store:store.name,shift_name:`${sh.label} · ${sh.start}–${sh.end}`,shift_type:String(fd.get("type")) as keyof typeof shiftLabels,hours,notes:String(fd.get("notes"))})}}><button type="button" className="close" onClick={onClose}><X/></button><p className="eyebrow">НОВАЯ ЗАПИСЬ</p><h2>Добавить смену</h2><div className="form-grid"><label>Дата<input name="date" type="date" defaultValue={today}/></label><label>Тип<select name="type"><option value="worked">Отработано</option><option value="replacement">Замена</option><option value="assigned">Выданная смена</option></select></label></div><label>Точка<select value={id} onChange={e=>setId(e.target.value)}>{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label><label>График<select value={idx} onChange={e=>{setIdx(Number(e.target.value));setHours(store.shifts[Number(e.target.value)].hours)}}>{store.shifts.map((s,i)=><option key={s.label} value={i}>{s.label} · {s.start}–{s.end} ({s.hours} ч)</option>)}</select></label><label>Фактические часы <span className="subtle">можно скорректировать</span><input type="number" min="0" step="0.5" value={hours} onChange={e=>setHours(Number(e.target.value))}/></label><div className="estimate">Ожидаемый заработок <b>{money(hours*rate)}</b></div><label>Заметка <span className="subtle">необязательно</span><input name="notes" placeholder="Например, замена за Анну"/></label><button className="primary full">Сохранить смену</button></form></div>}
