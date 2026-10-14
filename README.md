@@ -16,6 +16,21 @@
 
 На Vercel импортируйте репозиторий и добавьте `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` и `CONNECTEAM_ENCRYPTION_KEY` в Environment Variables.
 
+## Telegram Mini App
+
+Укажите в Vercel `NEXT_PUBLIC_APP_URL`, `TELEGRAM_BOT_TOKEN` и случайный `TELEGRAM_WEBHOOK_SECRET`. Не добавляйте токен бота в исходный код или переменные с префиксом `NEXT_PUBLIC_`.
+
+После деплоя зарегистрируйте webhook, заменив значения своими:
+
+```bash
+curl -X POST "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
+  -d "url=https://worklog-crm.vercel.app/api/telegram/webhook" \
+  -d "secret_token=<TELEGRAM_WEBHOOK_SECRET>" \
+  -d 'allowed_updates=["message"]'
+```
+
+После команды `/start` бот покажет кнопку «Открыть WorkLog», которая запустит сайт как полноэкранное Mini App. Пользователь проходит существующий вход Supabase только при первом запуске.
+
 ## Connecteam
 
 В WorkLog откройте «Настройки → Connecteam», вставьте личную Calendar Sync link из Connecteam и нажмите «Подключить и синхронизировать». WorkLog получает только плановые смены с сегодняшнего дня до конца текущего месяца. Они не участвуют в суммах часов и дохода — их заменяют вручную введённые фактические часы. Ссылка календаря зашифрована перед сохранением в Supabase и читается только серверным маршрутом.
