@@ -33,6 +33,7 @@ import {
 import { stores } from "@/lib/stores";
 import { supabase } from "@/lib/supabase";
 import { copy, Lang, locales, money, Shift } from "@/lib/worklog";
+import { MobileNav } from "@/components/mobile-nav";
 
 const current = new Date(),
   today = format(current, "yyyy-MM-dd");
@@ -123,7 +124,7 @@ export default function Home() {
     [shifts, setShifts] = useState<Shift[]>(demo),
     [rate, setRate] = useState(150),
     [month, setMonth] = useState(current),
-    [dialog, setDialog] = useState<"shift" | "settings" | null>(null),
+    [dialog, setDialog] = useState<"shift" | "settings" | "quick" | null>(null),
     [date, setDate] = useState(today),
     [editing, setEditing] = useState<Shift | null>(null);
   const t = copy[lang];
@@ -424,6 +425,50 @@ export default function Home() {
           )}
         </section>
       </section>
+      <MobileNav
+        active="calendar"
+        calendar={t.calendar}
+        analytics={t.analytics}
+        settings={t.settings}
+        onSettings={() => setDialog("quick")}
+      />
+      {dialog === "quick" && (
+        <div className="overlay mobile-sheet-overlay" onMouseDown={() => setDialog(null)}>
+          <section
+            className="mobile-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t.settings}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <span className="sheet-handle" />
+            <div className="mobile-sheet-head">
+              <h2>{t.settings}</h2>
+              <button type="button" className="close" onClick={() => setDialog(null)} aria-label="Close">
+                <X />
+              </button>
+            </div>
+            <div className="mobile-setting-row">
+              <span>{t.theme}</span>
+              <button
+                type="button"
+                className="setting-action"
+                onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+              >
+                {theme === "light" ? <Moon /> : <Sun />}
+                {theme === "light" ? t.dark : t.light}
+              </button>
+            </div>
+            <div className="mobile-setting-row">
+              <span>{t.language}</span>
+              <LangPicker lang={lang} setLang={setLang} />
+            </div>
+            <button type="button" className="setting-link" onClick={() => setDialog("settings")}>
+              {t.changeRate}
+            </button>
+          </section>
+        </div>
+      )}
       {dialog === "settings" && (
         <div className="overlay" onMouseDown={() => setDialog(null)}>
           <form

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { copy, Lang, locales, money, Shift } from "@/lib/worklog";
 import { supabase } from "@/lib/supabase";
+import { MobileNav } from "@/components/mobile-nav";
 
 const now = new Date();
 const readThemeCookie = () => {
@@ -107,7 +108,8 @@ export default function Analytics() {
     [theme, setTheme] = useState<"light" | "dark">(
       () => readThemeCookie() || "light",
     ),
-    [shifts, setShifts] = useState<Shift[]>(seed);
+    [shifts, setShifts] = useState<Shift[]>(seed),
+    [mobileMenu, setMobileMenu] = useState(false);
   const t = copy[lang];
   useEffect(() => {
     const savedLang = localStorage.getItem("worklog-lang") as Lang | null,
@@ -329,6 +331,47 @@ export default function Analytics() {
           )}
         </section>
       </section>
+      <MobileNav
+        active="analytics"
+        calendar={t.calendar}
+        analytics={t.analytics}
+        settings={t.settings}
+        onSettings={() => setMobileMenu(true)}
+      />
+      {mobileMenu && (
+        <div className="overlay mobile-sheet-overlay" onMouseDown={() => setMobileMenu(false)}>
+          <section
+            className="mobile-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t.settings}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <span className="sheet-handle" />
+            <div className="mobile-sheet-head">
+              <h2>{t.settings}</h2>
+              <button type="button" className="close" onClick={() => setMobileMenu(false)} aria-label="Close">
+                ×
+              </button>
+            </div>
+            <div className="mobile-setting-row">
+              <span>{t.theme}</span>
+              <button
+                type="button"
+                className="setting-action"
+                onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+              >
+                {theme === "light" ? <Moon /> : <Sun />}
+                {theme === "light" ? t.dark : t.light}
+              </button>
+            </div>
+            <div className="mobile-setting-row">
+              <span>{t.language}</span>
+              <Picker lang={lang} setLang={setLang} />
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   );
 }
