@@ -1077,10 +1077,22 @@ h2 {
 .delete-shift {
   display: block;
   width: 100%;
-  margin-top: 13px;
+  min-height: 46px;
+  margin: 18px 0 0;
+  border: 1px solid #f0b9c1;
+  border-radius: 11px;
+  background: #fff4f5;
   color: #b13e4b;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+.delete-shift:hover {
+  border-color: #df7885;
+  background: #ffe8eb;
+}
+.delete-shift:active {
+  transform: scale(0.98);
 }
 .connecteam-cta {
   width: 100%;
@@ -1447,6 +1459,12 @@ h2 {
     padding: 10px 20px calc(10px + env(safe-area-inset-bottom));
     border-radius: 0;
     box-shadow: 0 -8px 20px rgba(255, 255, 255, 0.92);
+  }
+  .dialog-body .delete-shift {
+    min-height: 54px;
+    margin: 20px 0 12px;
+    border-radius: 13px;
+    font-size: 14px;
   }
   .mobile-nav {
     position: fixed;

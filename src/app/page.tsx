@@ -763,7 +763,6 @@ function ShiftDialog({
             {t.note} <span className="subtle">{t.optional}</span>
             <input name="note" defaultValue={editing?.notes || ""} />
           </label>
-          <button className="primary full">{t.saveShift}</button>
           {editing?.source !== "connecteam" && editing && (
             <button
               type="button"
@@ -773,6 +772,7 @@ function ShiftDialog({
               {t.deleteShift}
             </button>
           )}
+          <button className="primary full">{t.saveShift}</button>
         </div>
       </form>
     </div>
