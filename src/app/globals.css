@@ -885,7 +885,7 @@ h2 {
   box-shadow: 0 20px 60px #241c392e;
   position: relative;
 }
-.dialog > p:not(.eyebrow) {
+.dialog-body > p:not(.eyebrow) {
   font-size: 13px;
   color: var(--muted);
   margin: 7px 0 22px;
@@ -1257,15 +1257,67 @@ h2 {
     grid-template-columns: 1fr;
   }
   .overlay:not(.mobile-sheet-overlay) {
+    display: flex;
     align-items: end;
+    justify-content: center;
+    overflow: hidden;
     padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
   }
   .dialog {
     width: 100%;
-    max-height: min(88dvh, 720px);
-    overflow-y: auto;
+    max-height: calc(100dvh - 10px - env(safe-area-inset-bottom));
+    min-height: 0;
     border-radius: 20px;
-    padding: 24px 19px calc(24px + env(safe-area-inset-bottom));
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+  .dialog::before {
+    content: "";
+    display: block;
+    flex: 0 0 auto;
+    width: 38px;
+    height: 4px;
+    margin: 9px auto 0;
+    border-radius: 99px;
+    background: #d8d4e2;
+  }
+  .dialog .close {
+    z-index: 1;
+    right: 11px;
+    top: 10px;
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 10px;
+  }
+  .dialog-body {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 20px 20px calc(24px + env(safe-area-inset-bottom));
+    scrollbar-width: none;
+  }
+  .dialog-body::-webkit-scrollbar {
+    display: none;
+  }
+  .dialog-body .eyebrow {
+    margin-right: 48px;
+  }
+  .dialog-body .full {
+    position: sticky;
+    bottom: calc(-24px - env(safe-area-inset-bottom));
+    margin: 20px -20px calc(-24px - env(safe-area-inset-bottom));
+    width: calc(100% + 40px);
+    min-height: 60px;
+    padding: 10px 20px calc(10px + env(safe-area-inset-bottom));
+    border-radius: 0;
+    box-shadow: 0 -8px 20px rgba(255, 255, 255, 0.92);
   }
   .mobile-nav {
     position: fixed;
@@ -1396,6 +1448,12 @@ h2 {
   }
   .theme-dark .mobile-sheet {
     background: #24212c;
+  }
+  .theme-dark .dialog::before {
+    background: #57505f;
+  }
+  .theme-dark .dialog-body .full {
+    box-shadow: 0 -8px 20px rgba(36, 33, 44, 0.94);
   }
   .theme-dark .sheet-handle {
     background: #57505f;

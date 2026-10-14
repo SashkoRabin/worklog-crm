@@ -487,14 +487,16 @@ export default function Home() {
             >
               <X />
             </button>
-            <p className="eyebrow">{t.settings}</p>
-            <h2>{t.rate}</h2>
-            <p>{t.rateNote}</p>
-            <label>
-              {t.rate}
-              <input name="rate" type="number" min="0" defaultValue={rate} />
-            </label>
-            <button className="primary full">{t.save}</button>
+            <div className="dialog-body">
+              <p className="eyebrow">{t.settings}</p>
+              <h2>{t.rate}</h2>
+              <p>{t.rateNote}</p>
+              <label>
+                {t.rate}
+                <input name="rate" type="number" min="0" defaultValue={rate} />
+              </label>
+              <button className="primary full">{t.save}</button>
+            </div>
           </form>
         </div>
       )}
@@ -559,83 +561,85 @@ function ShiftDialog({
         <button type="button" className="close" onClick={onClose}>
           <X />
         </button>
-        <p className="eyebrow">{t.newShift}</p>
-        <h2>{t.add}</h2>
-        <div className="form-grid">
+        <div className="dialog-body">
+          <p className="eyebrow">{t.newShift}</p>
+          <h2>{t.add}</h2>
+          <div className="form-grid">
+            <label>
+              {t.date}
+              <input
+                name="date"
+                type="date"
+                defaultValue={editing?.work_date || date}
+              />
+            </label>
+            <label>
+              {t.type}
+              <select name="type" defaultValue={editing?.shift_type || "worked"}>
+                <option value="worked">{t.workedType}</option>
+                <option value="replacement">{t.replacement}</option>
+                <option value="assigned">{t.assigned}</option>
+              </select>
+            </label>
+          </div>
           <label>
-            {t.date}
+            {t.store}
+            <select
+              name="store"
+              value={store.name}
+              onChange={(event) =>
+                selectStore(
+                  stores.find((item) => item.name === event.target.value)!.id,
+                )
+              }
+            >
+              {stores.map((item) => (
+                <option value={item.name} key={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {t.schedule}
+            <select
+              name="schedule"
+              value={`${shift.start}–${shift.end}`}
+              onChange={(event) =>
+                selectShift(
+                  store.shifts.findIndex(
+                    (item) => `${item.start}–${item.end}` === event.target.value,
+                  ),
+                )
+              }
+            >
+              {store.shifts.map((item) => (
+                <option
+                  value={`${item.start}–${item.end}`}
+                  key={`${item.start}-${item.end}`}
+                >
+                  {item.start}–{item.end} · {item.hours} h
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {t.actual}
             <input
-              name="date"
-              type="date"
-              defaultValue={editing?.work_date || date}
+              name="hours"
+              type="number"
+              step="0.5"
+              min="0"
+              value={hours}
+              onChange={(event) => setHours(Number(event.target.value))}
             />
           </label>
           <label>
-            {t.type}
-            <select name="type" defaultValue={editing?.shift_type || "worked"}>
-              <option value="worked">{t.workedType}</option>
-              <option value="replacement">{t.replacement}</option>
-              <option value="assigned">{t.assigned}</option>
-            </select>
+            {t.note} <span className="subtle">{t.optional}</span>
+            <input name="note" defaultValue={editing?.notes || ""} />
           </label>
+          <button className="primary full">{t.saveShift}</button>
         </div>
-        <label>
-          {t.store}
-          <select
-            name="store"
-            value={store.name}
-            onChange={(event) =>
-              selectStore(
-                stores.find((item) => item.name === event.target.value)!.id,
-              )
-            }
-          >
-            {stores.map((item) => (
-              <option value={item.name} key={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          {t.schedule}
-          <select
-            name="schedule"
-            value={`${shift.start}–${shift.end}`}
-            onChange={(event) =>
-              selectShift(
-                store.shifts.findIndex(
-                  (item) => `${item.start}–${item.end}` === event.target.value,
-                ),
-              )
-            }
-          >
-            {store.shifts.map((item) => (
-              <option
-                value={`${item.start}–${item.end}`}
-                key={`${item.start}-${item.end}`}
-              >
-                {item.start}–{item.end} · {item.hours} h
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          {t.actual}
-          <input
-            name="hours"
-            type="number"
-            step="0.5"
-            min="0"
-            value={hours}
-            onChange={(event) => setHours(Number(event.target.value))}
-          />
-        </label>
-        <label>
-          {t.note} <span className="subtle">{t.optional}</span>
-          <input name="note" defaultValue={editing?.notes || ""} />
-        </label>
-        <button className="primary full">{t.saveShift}</button>
       </form>
     </div>
   );
