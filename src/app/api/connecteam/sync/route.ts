@@ -112,10 +112,40 @@ async function userAndClients() {
     throw new SetupError("Connecteam sync is not configured on this deployment.");
   }
   const cookieStore = await cookies();
-  const auth = createServerClient(url, anon, { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } });
+  const auth = createServerClient(url, anon, {
+    cookies: {
+      getAll: () => cookieStore.getAll(),
+      setAll: (items) => {
+        try {
+          items.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+        } catch {
+          // Route handlers may run in a context where set is read-only; proxy still refreshes the session.
+        }
+      },
+    },
+  });
   const { data: { user } } = await auth.auth.getUser();
   if (!user) return null;
   return { user, database: auth };
+}
+
+function shiftFromEvent(
+  userId: string,
+  event: CalendarEvent,
+  hourlyRate: number,
+) {
+  return {
+    user_id: userId,
+    work_date: dateKey(event.startsAt),
+    store: storeName(event.title),
+    shift_name: `${timeLabel(event.startsAt)}–${timeLabel(event.endsAt)}`,
+    shift_type: "assigned" as const,
+    hours: Math.round(((event.endsAt.getTime() - event.startsAt.getTime()) / 3_600_000) * 100) / 100,
+    hourly_rate: hourlyRate,
+    source: "connecteam" as const,
+    external_id: event.uid,
+    notes: event.description || null,
+  };
 }
 
 export async function GET() {
@@ -152,39 +182,53 @@ export async function POST(request: Request) {
     // The personal ICS feed is the source of truth. Import every event it
     // contains so the calendar retains the whole available shift history.
     const calendarItems = parseCalendar(ics);
-    const { data: manualShifts, error: manualShiftsError } = await context.database
-      .from("shifts")
-      .select("work_date")
-      .eq("user_id", context.user.id)
-      .eq("source", "manual");
+    const feedUids = new Set(calendarItems.map((event) => event.uid));
+    const [{ data: manualShifts, error: manualShiftsError }, { data: dismissedRows, error: dismissedError }, { data: profile, error: profileError }] =
+      await Promise.all([
+        context.database
+          .from("shifts")
+          .select("work_date")
+          .eq("user_id", context.user.id)
+          .eq("source", "manual"),
+        context.database
+          .from("connecteam_dismissed_shifts")
+          .select("external_id")
+          .eq("user_id", context.user.id),
+        context.database
+          .from("profiles")
+          .select("hourly_rate")
+          .eq("id", context.user.id)
+          .maybeSingle(),
+      ]);
     if (manualShiftsError) throw manualShiftsError;
-    const manualDates = new Set((manualShifts || []).map((shift) => shift.work_date));
-    const items = calendarItems.filter(
-      (event) => !manualDates.has(dateKey(event.startsAt)),
-    );
-    const { data: profile, error: profileError } = await context.database
-      .from("profiles")
-      .select("hourly_rate")
-      .eq("id", context.user.id)
-      .maybeSingle();
+    if (dismissedError) throw dismissedError;
     if (profileError) throw profileError;
-    const deleted = await context.database.from("shifts").delete().eq("user_id", context.user.id).eq("source", "connecteam");
-    if (deleted.error) throw deleted.error;
+    const manualDates = new Set((manualShifts || []).map((shift) => shift.work_date));
+    const dismissedUids = new Set((dismissedRows || []).map((row) => row.external_id));
+    const items = calendarItems.filter(
+      (event) =>
+        !manualDates.has(dateKey(event.startsAt)) && !dismissedUids.has(event.uid),
+    );
+    const hourlyRate = Number(profile?.hourly_rate ?? 0);
     if (items.length) {
-      const imported = items.map((event) => ({
-        user_id: context.user.id,
-        work_date: dateKey(event.startsAt),
-        store: storeName(event.title),
-        shift_name: `${timeLabel(event.startsAt)}–${timeLabel(event.endsAt)}`,
-        shift_type: "assigned",
-        hours: Math.round(((event.endsAt.getTime() - event.startsAt.getTime()) / 3_600_000) * 100) / 100,
-        hourly_rate: Number(profile?.hourly_rate ?? 0),
-        source: "connecteam",
-        external_id: event.uid,
-        notes: event.description || null,
-      }));
-      const inserted = await context.database.from("shifts").insert(imported);
-      if (inserted.error) throw inserted.error;
+      const imported = items.map((event) => shiftFromEvent(context.user.id, event, hourlyRate));
+      const upserted = await context.database
+        .from("shifts")
+        .upsert(imported, { onConflict: "user_id,source,external_id" });
+      if (upserted.error) throw upserted.error;
+    }
+    const { data: storedConnecteam, error: storedError } = await context.database
+      .from("shifts")
+      .select("id, external_id")
+      .eq("user_id", context.user.id)
+      .eq("source", "connecteam");
+    if (storedError) throw storedError;
+    const staleIds = (storedConnecteam || [])
+      .filter((shift) => shift.external_id && !feedUids.has(shift.external_id))
+      .map((shift) => shift.id);
+    if (staleIds.length) {
+      const removed = await context.database.from("shifts").delete().in("id", staleIds);
+      if (removed.error) throw removed.error;
     }
     const updated = await context.database.from("connecteam_connections").update({ last_synced_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("user_id", context.user.id);
     if (updated.error) throw updated.error;

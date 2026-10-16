@@ -7,7 +7,7 @@
 1. Скопируйте `.env.example` в `.env.local` и укажите URL и anon key проекта Supabase.
 2. В Supabase откройте SQL Editor и выполните [`supabase/schema.sql`](./supabase/schema.sql).
 3. В Authentication → Providers включите Email. В URL Configuration добавьте адрес Vercel-приложения.
-4. Для личной синхронизации Connecteam добавьте серверную переменную `CONNECTEAM_ENCRYPTION_KEY` (случайные 32 байта в base64). В существующем проекте выполните [`supabase/connecteam-migration.sql`](./supabase/connecteam-migration.sql). Никогда не добавляйте это значение в переменные с префиксом `NEXT_PUBLIC_`.
+4. Для личной синхронизации Connecteam добавьте серверную переменную `CONNECTEAM_ENCRYPTION_KEY` (случайные 32 байта в base64). В существующем проекте выполните [`supabase/connecteam-migration.sql`](./supabase/connecteam-migration.sql), а для скрытия удалённых смен Connecteam — [`supabase/connecteam-dismissed-migration.sql`](./supabase/connecteam-dismissed-migration.sql). Никогда не добавляйте это значение в переменные с префиксом `NEXT_PUBLIC_`.
 5. Запустите `npm install`, затем `npm run dev`.
 
 Без переменных окружения интерфейс открывается в режиме предпросмотра, но вход и сохранение в базу выключены.

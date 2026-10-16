@@ -15,6 +15,7 @@ import {
   TrendingUp,
   WalletCards,
 } from "lucide-react";
+import { loadUserShifts, syncConnecteamIfConnected } from "@/lib/connecteam-client";
 import { copy, isWorkedShift, Lang, locales, money, Shift } from "@/lib/worklog";
 import { supabase } from "@/lib/supabase";
 import { MobileNav } from "@/components/mobile-nav";
@@ -122,11 +123,8 @@ export default function Analytics() {
     if (!client) return;
     client.auth.getUser().then(async ({ data }) => {
       if (!data.user) return;
-      const { data: rows } = await client
-        .from("shifts")
-        .select("*")
-        .eq("user_id", data.user.id);
-      if (rows) setShifts(rows as Shift[]);
+      await syncConnecteamIfConnected();
+      setShifts(await loadUserShifts(data.user.id));
     });
   }, []);
   useEffect(() => {

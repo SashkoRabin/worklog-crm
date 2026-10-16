@@ -32,6 +32,12 @@ import {
   X,
 } from "lucide-react";
 import { stores } from "@/lib/stores";
+import {
+  dismissConnecteamShift,
+  loadUserShifts,
+  syncConnecteamCalendar,
+  syncConnecteamIfConnected,
+} from "@/lib/connecteam-client";
 import { supabase } from "@/lib/supabase";
 import { copy, isWorkedShift, Lang, locales, money, Shift } from "@/lib/worklog";
 import { MobileNav } from "@/components/mobile-nav";
@@ -147,19 +153,16 @@ export default function Home() {
     client.auth.getUser().then(async ({ data }) => {
       if (!data.user) return;
       setUser(data.user);
-      const [{ data: rows }, { data: profile }] = await Promise.all([
-        client
-          .from("shifts")
-          .select("*")
-          .eq("user_id", data.user.id)
-          .order("work_date", { ascending: false }),
+      await syncConnecteamIfConnected();
+      const [{ data: profile }, rows] = await Promise.all([
         client
           .from("profiles")
           .select("hourly_rate")
           .eq("id", data.user.id)
           .single(),
+        loadUserShifts(data.user.id),
       ]);
-      setShifts((rows as Shift[]) || []);
+      setShifts(rows);
       if (profile?.hourly_rate) setRate(Number(profile.hourly_rate));
     });
   }, []);
@@ -197,6 +200,7 @@ export default function Home() {
   });
   async function saveShift(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (editing?.source === "connecteam") return;
     const values = new FormData(e.currentTarget),
       row = {
         work_date: String(values.get("date")),
@@ -232,12 +236,19 @@ export default function Home() {
     setDialog(null);
     setEditing(null);
     if (supabase && user) {
+      if (shift.source === "connecteam" && shift.external_id) {
+        await dismissConnecteamShift(user.id, shift.external_id);
+      }
       const { error } = await supabase.from("shifts").delete().eq("id", shift.id);
       if (error) {
         setShifts((all) => [shift, ...all]);
         console.error("Unable to delete shift", error);
       }
     }
+  }
+  async function refreshShifts() {
+    if (!user) return;
+    setShifts(await loadUserShifts(user.id));
   }
   return (
     <main className={`app-shell ${theme === "dark" ? "theme-dark" : ""}`}>
@@ -371,7 +382,7 @@ export default function Home() {
                   key={day.toString()}
                   onClick={() => {
                     setDate(format(day, "yyyy-MM-dd"));
-                    setEditing(daily[0]?.source === "connecteam" ? null : daily[0] || null);
+                    setEditing(daily[0] || null);
                     setDialog("shift");
                   }}
                 >
@@ -532,7 +543,7 @@ export default function Home() {
         </div>
       )}
       {dialog === "connecteam" && (
-        <ConnecteamDialog lang={lang} onClose={() => setDialog(null)} onSynced={() => window.location.reload()} />
+        <ConnecteamDialog lang={lang} onClose={() => setDialog(null)} onSynced={refreshShifts} />
       )}
       {dialog === "shift" && (
         <ShiftDialog
@@ -555,7 +566,7 @@ function ConnecteamDialog({
 }: {
   lang: Lang;
   onClose: () => void;
-  onSynced: () => void;
+  onSynced: () => void | Promise<void>;
 }) {
   const text = connecteamText[lang];
   const [url, setUrl] = useState("");
@@ -580,17 +591,11 @@ function ConnecteamDialog({
     setPending(true);
     setError("");
     try {
-      const response = await fetch("/api/connecteam/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(url ? { calendarUrl: url } : {}),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.code === "SETUP_REQUIRED" ? "CONNECTEAM_SETUP_REQUIRED" : data.error || "Unable to sync Connecteam.");
+      await syncConnecteamCalendar(url || undefined);
       setConnected(true);
       setLastSynced(new Date().toISOString());
       setUrl("");
-      onSynced();
+      await onSynced();
     } catch (reason) {
       setError(reason instanceof Error && reason.message === "CONNECTEAM_SETUP_REQUIRED" ? "Серверная часть Connecteam ещё не настроена. Добавьте SUPABASE_SERVICE_ROLE_KEY и CONNECTEAM_ENCRYPTION_KEY в .env.local или переменные деплоя." : reason instanceof Error ? reason.message : "Не удалось синхронизировать Connecteam.");
     } finally {
@@ -666,6 +671,7 @@ function ShiftDialog({
     );
   const store = stores.find((item) => item.id === storeId)!,
     shift = store.shifts[shiftIndex];
+  const fromConnecteam = editing?.source === "connecteam";
   const selectStore = (id: string) => {
     const next = stores.find((item) => item.id === id)!;
     setStoreId(id);
@@ -687,8 +693,13 @@ function ShiftDialog({
           <X />
         </button>
         <div className="dialog-body">
-          <p className="eyebrow">{t.newShift}</p>
-          <h2>{t.add}</h2>
+          <p className="eyebrow">{fromConnecteam ? t.connecteam : t.newShift}</p>
+          <h2>{fromConnecteam ? editing?.store : t.add}</h2>
+          {fromConnecteam ? (
+            <p className="subtle">
+              {editing?.shift_name} · {editing?.hours} h · {t.connecteam}
+            </p>
+          ) : null}
           <div className="form-grid">
             <label>
               {t.date}
@@ -696,11 +707,17 @@ function ShiftDialog({
                 name="date"
                 type="date"
                 defaultValue={editing?.work_date || date}
+                readOnly={fromConnecteam}
+                disabled={fromConnecteam}
               />
             </label>
             <label>
               {t.type}
-              <select name="type" defaultValue={editing?.shift_type || "worked"}>
+              <select
+                name="type"
+                defaultValue={editing?.shift_type || "worked"}
+                disabled={fromConnecteam}
+              >
                 <option value="worked">{t.workedType}</option>
                 <option value="replacement">{t.replacement}</option>
                 <option value="assigned">{t.assigned}</option>
@@ -711,7 +728,8 @@ function ShiftDialog({
             {t.store}
             <select
               name="store"
-              value={store.name}
+              value={fromConnecteam ? editing?.store ?? store.name : store.name}
+              disabled={fromConnecteam}
               onChange={(event) =>
                 selectStore(
                   stores.find((item) => item.name === event.target.value)!.id,
@@ -727,26 +745,30 @@ function ShiftDialog({
           </label>
           <label>
             {t.schedule}
-            <select
-              name="schedule"
-              value={`${shift.start}–${shift.end}`}
-              onChange={(event) =>
-                selectShift(
-                  store.shifts.findIndex(
-                    (item) => `${item.start}–${item.end}` === event.target.value,
-                  ),
-                )
-              }
-            >
-              {store.shifts.map((item) => (
-                <option
-                  value={`${item.start}–${item.end}`}
-                  key={`${item.start}-${item.end}`}
-                >
-                  {item.start}–{item.end} · {item.hours} h
-                </option>
-              ))}
-            </select>
+            {fromConnecteam ? (
+              <input name="schedule" readOnly disabled value={editing?.shift_name ?? ""} />
+            ) : (
+              <select
+                name="schedule"
+                value={`${shift.start}–${shift.end}`}
+                onChange={(event) =>
+                  selectShift(
+                    store.shifts.findIndex(
+                      (item) => `${item.start}–${item.end}` === event.target.value,
+                    ),
+                  )
+                }
+              >
+                {store.shifts.map((item) => (
+                  <option
+                    value={`${item.start}–${item.end}`}
+                    key={`${item.start}-${item.end}`}
+                  >
+                    {item.start}–{item.end} · {item.hours} h
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
           <label>
             {t.actual}
@@ -755,15 +777,22 @@ function ShiftDialog({
               type="number"
               step="0.5"
               min="0"
-              value={hours}
+              value={fromConnecteam ? editing?.hours ?? hours : hours}
+              readOnly={fromConnecteam}
+              disabled={fromConnecteam}
               onChange={(event) => setHours(Number(event.target.value))}
             />
           </label>
           <label>
             {t.note} <span className="subtle">{t.optional}</span>
-            <input name="note" defaultValue={editing?.notes || ""} />
+            <input
+              name="note"
+              defaultValue={editing?.notes || ""}
+              readOnly={fromConnecteam}
+              disabled={fromConnecteam}
+            />
           </label>
-          {editing?.source !== "connecteam" && editing && (
+          {editing && (
             <button
               type="button"
               className="delete-shift"
@@ -772,7 +801,13 @@ function ShiftDialog({
               {t.deleteShift}
             </button>
           )}
-          <button className="primary full">{t.saveShift}</button>
+          {fromConnecteam ? (
+            <button type="button" className="primary full" onClick={onClose}>
+              {t.save}
+            </button>
+          ) : (
+            <button className="primary full">{t.saveShift}</button>
+          )}
         </div>
       </form>
     </div>
