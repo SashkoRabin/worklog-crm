@@ -909,7 +909,7 @@ h2 {
   display: grid;
   place-items: center;
   padding: 20px;
-  z-index: 5;
+  z-index: 20;
 }
 .dialog {
   background: #fff;
@@ -1066,13 +1066,36 @@ h2 {
   font-size: 12px;
   line-height: 1.4;
 }
-.disconnect {
-  display: block;
+.connecteam-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+.connecteam-actions .primary,
+.connecteam-actions .disconnect {
   width: 100%;
-  margin-top: 13px;
+  min-height: 48px;
+  border-radius: 12px;
+}
+.disconnect {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #f0b9c1;
+  border-radius: 12px;
+  background: #fff4f5;
   color: #b13e4b;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
+}
+.disconnect:hover {
+  border-color: #df7885;
+  background: #ffe8eb;
+}
+.disconnect:disabled,
+.connecteam-actions .primary:disabled {
+  opacity: 0.65;
 }
 .delete-shift {
   display: block;
@@ -1154,6 +1177,11 @@ h2 {
 }
 .theme-dark .connecteam-cta small {
   color: #afa7c5;
+}
+.theme-dark .disconnect {
+  border-color: #6b3a42;
+  background: #3a2428;
+  color: #f0b9c1;
 }
 .setup-note {
   font-size: 11px;
@@ -1466,6 +1494,24 @@ h2 {
     border-radius: 13px;
     font-size: 14px;
   }
+  .connecteam-dialog .dialog-body {
+    padding-bottom: calc(28px + env(safe-area-inset-bottom));
+  }
+  .connecteam-actions {
+    position: sticky;
+    bottom: 0;
+    gap: 8px;
+    margin: 18px -20px 0;
+    padding: 12px 20px calc(8px + env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0), #fff 18px);
+  }
+  .connecteam-actions .primary,
+  .connecteam-actions .disconnect {
+    min-height: 52px;
+    border-radius: 13px;
+    font-size: 15px;
+    box-shadow: none;
+  }
   .mobile-nav {
     position: fixed;
     z-index: 8;
@@ -1602,6 +1648,14 @@ h2 {
   }
   .theme-dark .dialog-body .full {
     box-shadow: 0 -8px 20px rgba(36, 33, 44, 0.94);
+  }
+  .theme-dark .connecteam-actions {
+    background: linear-gradient(180deg, rgba(36, 33, 44, 0), #24212c 18px);
+  }
+  .theme-dark .disconnect {
+    border-color: #6b3a42;
+    background: #3a2428;
+    color: #f0b9c1;
   }
   .theme-dark .sheet-handle {
     background: #57505f;

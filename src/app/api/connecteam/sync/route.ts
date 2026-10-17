@@ -129,6 +129,11 @@ async function userAndClients() {
   return { user, database: auth };
 }
 
+function isMissingRelation(error: { code?: string; message?: string } | null) {
+  if (!error) return false;
+  return error.code === "42P01" || error.code === "PGRST205" || /connecteam_dismissed_shifts/i.test(error.message || "");
+}
+
 function shiftFromEvent(
   userId: string,
   event: CalendarEvent,
@@ -174,16 +179,13 @@ export async function POST(request: Request) {
     }
     if (!connection && !suppliedCalendarUrl) throw new Error("Connect a Connecteam calendar before syncing.");
     const calendarUrl = suppliedCalendarUrl || decrypt(connection!.calendar_url_encrypted);
-    const response = await fetch(calendarUrl, { cache: "no-store", redirect: "error", signal: AbortSignal.timeout(12_000), headers: { Accept: "text/calendar, text/plain;q=0.9" } });
+    const response = await fetch(calendarUrl, { cache: "no-store", redirect: "follow", signal: AbortSignal.timeout(15_000), headers: { Accept: "text/calendar, text/plain;q=0.9, */*;q=0.1" } });
     if (!response.ok) throw new Error("Connecteam calendar could not be downloaded. Check the link and try again.");
     const contentType = response.headers.get("content-type") || "";
     const ics = await response.text();
     if ((!contentType.includes("calendar") && !ics.includes("BEGIN:VCALENDAR")) || ics.length > 2_000_000) throw new Error("The link did not return a valid calendar.");
-    // The personal ICS feed is the source of truth. Import every event it
-    // contains so the calendar retains the whole available shift history.
     const calendarItems = parseCalendar(ics);
-    const feedUids = new Set(calendarItems.map((event) => event.uid));
-    const [{ data: manualShifts, error: manualShiftsError }, { data: dismissedRows, error: dismissedError }, { data: profile, error: profileError }] =
+    const [{ data: manualShifts, error: manualShiftsError }, dismissed, { data: profile, error: profileError }] =
       await Promise.all([
         context.database
           .from("shifts")
@@ -201,34 +203,23 @@ export async function POST(request: Request) {
           .maybeSingle(),
       ]);
     if (manualShiftsError) throw manualShiftsError;
-    if (dismissedError) throw dismissedError;
+    if (dismissed.error && !isMissingRelation(dismissed.error)) throw dismissed.error;
     if (profileError) throw profileError;
     const manualDates = new Set((manualShifts || []).map((shift) => shift.work_date));
-    const dismissedUids = new Set((dismissedRows || []).map((row) => row.external_id));
-    const items = calendarItems.filter(
-      (event) =>
-        !manualDates.has(dateKey(event.startsAt)) && !dismissedUids.has(event.uid),
-    );
+    const dismissedUids = new Set((dismissed.data || []).map((row) => row.external_id));
+    const seen = new Set<string>();
+    const items = calendarItems.filter((event) => {
+      if (!event.uid || seen.has(event.uid) || dismissedUids.has(event.uid) || manualDates.has(dateKey(event.startsAt))) return false;
+      seen.add(event.uid);
+      return true;
+    });
     const hourlyRate = Number(profile?.hourly_rate ?? 0);
+    const deleted = await context.database.from("shifts").delete().eq("user_id", context.user.id).eq("source", "connecteam");
+    if (deleted.error) throw deleted.error;
     if (items.length) {
       const imported = items.map((event) => shiftFromEvent(context.user.id, event, hourlyRate));
-      const upserted = await context.database
-        .from("shifts")
-        .upsert(imported, { onConflict: "user_id,source,external_id" });
-      if (upserted.error) throw upserted.error;
-    }
-    const { data: storedConnecteam, error: storedError } = await context.database
-      .from("shifts")
-      .select("id, external_id")
-      .eq("user_id", context.user.id)
-      .eq("source", "connecteam");
-    if (storedError) throw storedError;
-    const staleIds = (storedConnecteam || [])
-      .filter((shift) => shift.external_id && !feedUids.has(shift.external_id))
-      .map((shift) => shift.id);
-    if (staleIds.length) {
-      const removed = await context.database.from("shifts").delete().in("id", staleIds);
-      if (removed.error) throw removed.error;
+      const inserted = await context.database.from("shifts").insert(imported);
+      if (inserted.error) throw inserted.error;
     }
     const updated = await context.database.from("connecteam_connections").update({ last_synced_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("user_id", context.user.id);
     if (updated.error) throw updated.error;
@@ -246,6 +237,8 @@ export async function DELETE() {
     if (result.error) throw result.error;
     const imported = await context.database.from("shifts").delete().eq("user_id", context.user.id).eq("source", "connecteam");
     if (imported.error) throw imported.error;
+    const dismissed = await context.database.from("connecteam_dismissed_shifts").delete().eq("user_id", context.user.id);
+    if (dismissed.error && !isMissingRelation(dismissed.error)) throw dismissed.error;
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json({ code: error instanceof SetupError ? "SETUP_REQUIRED" : undefined, error: error instanceof Error ? error.message : "Unable to disconnect Connecteam." }, { status: error instanceof SetupError ? 503 : 400 });

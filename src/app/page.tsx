@@ -575,10 +575,11 @@ function ConnecteamDialog({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
-    fetch("/api/connecteam/sync")
-      .then((response) => response.json())
-      .then((data) => {
+    fetch("/api/connecteam/sync", { credentials: "same-origin" })
+      .then(async (response) => {
+        const data = await response.json();
         if (data.code === "SETUP_REQUIRED") throw new Error("CONNECTEAM_SETUP_REQUIRED");
+        if (!response.ok) throw new Error(data.error || "Unable to check Connecteam connection.");
         if (data.connected) {
           setConnected(true);
           setLastSynced(data.lastSyncedAt);
@@ -606,10 +607,11 @@ function ConnecteamDialog({
     setPending(true);
     setError("");
     try {
-      const response = await fetch("/api/connecteam/sync", { method: "DELETE" });
+      const response = await fetch("/api/connecteam/sync", { method: "DELETE", credentials: "same-origin" });
       if (!response.ok) throw new Error("Unable to disconnect Connecteam.");
       setConnected(false);
       setLastSynced(null);
+      await onSynced();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to disconnect Connecteam.");
     } finally {
@@ -633,8 +635,10 @@ function ConnecteamDialog({
             </label>
           )}
           {error && <p className="error">{error}</p>}
-          <button className="primary full" disabled={pending}>{pending ? text.syncing : connected ? text.sync : text.connect}</button>
-          {connected && <button type="button" className="disconnect" onClick={disconnect} disabled={pending}>{text.disconnect}</button>}
+          <div className="connecteam-actions">
+            <button className="primary" disabled={pending}>{pending ? text.syncing : connected ? text.sync : text.connect}</button>
+            {connected && <button type="button" className="disconnect" onClick={disconnect} disabled={pending}>{text.disconnect}</button>}
+          </div>
         </div>
       </form>
     </div>

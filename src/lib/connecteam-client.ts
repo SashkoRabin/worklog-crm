@@ -2,7 +2,8 @@ import { supabase } from "@/lib/supabase";
 import type { Shift } from "@/lib/worklog";
 
 export async function isConnecteamConnected() {
-  const response = await fetch("/api/connecteam/sync");
+  const response = await fetch("/api/connecteam/sync", { credentials: "same-origin" });
+  if (!response.ok) return false;
   const data = await response.json();
   if (data.code === "SETUP_REQUIRED") return false;
   return Boolean(data.connected);
@@ -11,6 +12,7 @@ export async function isConnecteamConnected() {
 export async function syncConnecteamCalendar(calendarUrl?: string) {
   const response = await fetch("/api/connecteam/sync", {
     method: "POST",
+    credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(calendarUrl ? { calendarUrl } : {}),
   });
