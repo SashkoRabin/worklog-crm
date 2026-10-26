@@ -49,6 +49,12 @@ const connecteamText = {
   cs: { title: "Connecteam", intro: "Vložte osobní odkaz Calendar Sync. Plánované směny neovlivní výdělek, dokud nezadáte skutečné hodiny.", link: "Osobní odkaz kalendáře", connect: "Připojit a synchronizovat", sync: "Synchronizovat", syncing: "Synchronizace…", disconnect: "Odpojit", connected: "Připojeno", planned: "Plánováno" },
 } as const;
 
+const profileText = {
+  en: { name: "Name", nameHint: "Shown in your greeting" },
+  ru: { name: "Имя", nameHint: "Будет показано в заголовке" },
+  cs: { name: "Jméno", nameHint: "Zobrazí se v pozdravu" },
+} as const;
+
 const current = new Date(),
   today = format(current, "yyyy-MM-dd");
 const readThemeCookie = () => {
@@ -144,6 +150,7 @@ export default function Home() {
     [user, setUser] = useState<{ id: string; email?: string } | null>(null),
     [shifts, setShifts] = useState<Shift[]>(demo),
     [rate, setRate] = useState(150),
+    [name, setName] = useState(""),
     [month, setMonth] = useState(current),
     [dialog, setDialog] = useState<"settings" | "quick" | "connecteam" | null>(null),
     [date, setDate] = useState(today),
@@ -165,13 +172,14 @@ export default function Home() {
       const [{ data: profile }, rows] = await Promise.all([
         client
           .from("profiles")
-          .select("hourly_rate")
+          .select("hourly_rate,display_name")
           .eq("id", data.user.id)
           .single(),
         loadUserShifts(data.user.id),
       ]);
       setShifts(rows);
       if (profile?.hourly_rate) setRate(Number(profile.hourly_rate));
+      if (profile?.display_name) setName(profile.display_name);
 
       // Calendar synchronisation can take several seconds. Let the dashboard
       // become interactive first, then refresh only if the background sync did work.
@@ -289,6 +297,33 @@ export default function Home() {
     if (!user) return;
     setShifts(await loadUserShifts(user.id));
   }
+  async function saveSettings(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const values = new FormData(event.currentTarget),
+      nextRate = Number(values.get("rate")),
+      nextName = String(values.get("name") || "").trim();
+    if (supabase && user) {
+      const { error } = await supabase.from("profiles").upsert({
+        id: user.id,
+        hourly_rate: nextRate,
+        display_name: nextName || null,
+      });
+      if (error) {
+        console.error("Unable to save profile", error);
+        return;
+      }
+    }
+    setRate(nextRate);
+    setName(nextName);
+    setDialog(null);
+  }
+  const greeting = name
+    ? lang === "ru"
+      ? `Привет, ${name}! Вот твой месяц`
+      : lang === "cs"
+        ? `Ahoj, ${name}! Tady je tvůj měsíc`
+        : `Hello, ${name}! Here is your month`
+    : t.greeting;
   return (
     <main className={`app-shell ${theme === "dark" ? "theme-dark" : ""}`}>
       <aside className="sidebar">
@@ -338,7 +373,7 @@ export default function Home() {
         <header>
           <div>
             <p className="eyebrow">{t.dashboard}</p>
-            <h1>{t.greeting}</h1>
+            <h1>{greeting}</h1>
           </div>
           <button
             className="primary"
@@ -565,11 +600,7 @@ export default function Home() {
           <form
             className="dialog"
             onMouseDown={(e) => e.stopPropagation()}
-            onSubmit={(e) => {
-              e.preventDefault();
-              setRate(Number(new FormData(e.currentTarget).get("rate")));
-              setDialog(null);
-            }}
+            onSubmit={saveSettings}
           >
             <button
               type="button"
@@ -582,6 +613,10 @@ export default function Home() {
               <p className="eyebrow">{t.settings}</p>
               <h2>{t.rate}</h2>
               <p>{t.rateNote}</p>
+              <label>
+                {profileText[lang].name} <span className="subtle">{profileText[lang].nameHint}</span>
+                <input name="name" type="text" maxLength={80} defaultValue={name} />
+              </label>
               <label>
                 {t.rate}
                 <input name="rate" type="number" min="0" defaultValue={rate} />

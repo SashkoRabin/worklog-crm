@@ -2,6 +2,7 @@
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   hourly_rate numeric not null default 150 check (hourly_rate >= 0),
+  display_name text check (char_length(display_name) <= 80),
   created_at timestamptz not null default now()
 );
 
