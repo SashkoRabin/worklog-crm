@@ -113,17 +113,24 @@ function Metric({
   label,
   value,
   caption,
+  potential,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   caption: string;
+  potential?: { label: string; value: string };
 }) {
   return (
     <article className="metric card">
       <span className="metric-icon">{icon}</span>
       <p>{label}</p>
       <h2>{value}</h2>
+      {potential && (
+        <p className="metric-potential">
+          <span>{potential.label}</span> {potential.value}
+        </p>
+      )}
       <small>{caption}</small>
     </article>
   );
@@ -188,7 +195,12 @@ export default function Home() {
     ),
     actualOwn = own.filter((shift) => isWorkedShift(shift)),
     hours = actualOwn.reduce((sum, shift) => sum + shift.hours, 0),
+    potentialHours = own.reduce((sum, shift) => sum + shift.hours, 0),
     earned = actualOwn.reduce(
+      (sum, shift) => sum + shift.hours * shift.hourly_rate,
+      0,
+    ),
+    potentialEarned = own.reduce(
       (sum, shift) => sum + shift.hours * shift.hourly_rate,
       0,
     ),
@@ -346,12 +358,14 @@ export default function Home() {
             label={t.earned}
             value={money(earned)}
             caption={format(month, "LLLL", { locale: locales[lang] })}
+            potential={{ label: t.potential, value: money(potentialEarned) }}
           />
           <Metric
             icon={<Clock3 />}
             label={t.worked}
             value={`${hours} h`}
             caption={`${actualOwn.length} ${t.shifts}`}
+            potential={{ label: t.potential, value: `${potentialHours} h` }}
           />
           <Metric
             icon={<MapPin />}

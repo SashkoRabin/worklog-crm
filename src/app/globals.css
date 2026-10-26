@@ -401,6 +401,12 @@
 .theme-dark .store-count {
   background: #38304e;
 }
+.theme-dark .metric .metric-potential {
+  color: #b6abf1;
+}
+.theme-dark .metric-potential span {
+  color: #a9a2b7;
+}
 .theme-dark .calendar i,
 .theme-dark .day,
 .theme-dark .shift-row,
@@ -653,6 +659,16 @@ h2 {
 .metric h2 {
   font-size: 23px;
   margin-bottom: 4px;
+}
+.metric .metric-potential {
+  margin: -1px 0 6px;
+  color: #8071c7;
+  font-size: 10px;
+  font-weight: 750;
+}
+.metric-potential span {
+  color: #918ca0;
+  font-weight: 600;
 }
 .metric small {
   color: #918ca0;
