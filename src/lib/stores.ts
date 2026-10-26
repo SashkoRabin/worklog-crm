@@ -26,7 +26,7 @@ export const stores: Store[] = [
       { label: "Весь день", start: "10:00", end: "01:00", hours: 15 },
     ],
   },
-  ...["Kaprova", "Opletalova", "Karlak", "Revolucni"].map((name) => ({
+  ...["Kaprova", "Opletalova", "Karlák", "Revolucni"].map((name) => ({
     id: name.toLowerCase(),
     name,
     hours: 7,

@@ -2,6 +2,10 @@ import { enUS, ru, cs } from "date-fns/locale";
 
 export type Lang = "en" | "ru" | "cs";
 export type Shift = { id: string; work_date: string; store: string; shift_name: string; shift_type: "worked" | "replacement" | "assigned"; hours: number; hourly_rate: number; notes?: string | null; source?: "manual" | "connecteam"; external_id?: string | null };
+
+/** One canonical store name keeps manually entered and Connecteam shifts together. */
+export const normalizeStoreName = (store: string) =>
+  store === "Karlak" ? "Karlák" : store;
 export const isWorkedShift = (shift: Pick<Shift, "work_date">) => {
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;

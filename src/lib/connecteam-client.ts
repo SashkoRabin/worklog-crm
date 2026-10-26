@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { Shift } from "@/lib/worklog";
+import { normalizeStoreName, type Shift } from "@/lib/worklog";
 
 export async function isConnecteamConnected() {
   const response = await fetch("/api/connecteam/sync", { credentials: "same-origin" });
@@ -48,7 +48,10 @@ export async function loadUserShifts(userId: string) {
     .select("id,work_date,store,shift_name,shift_type,hours,hourly_rate,notes,source,external_id")
     .eq("user_id", userId)
     .order("work_date", { ascending: false });
-  return (rows as Shift[]) || [];
+  return ((rows as Shift[]) || []).map((shift) => ({
+    ...shift,
+    store: normalizeStoreName(shift.store),
+  }));
 }
 
 export async function dismissConnecteamShift(userId: string, externalId: string) {
