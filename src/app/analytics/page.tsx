@@ -123,8 +123,12 @@ export default function Analytics() {
     if (!client) return;
     client.auth.getUser().then(async ({ data }) => {
       if (!data.user) return;
-      await syncConnecteamIfConnected();
       setShifts(await loadUserShifts(data.user.id));
+      // Do not hold analytics behind a remote calendar request. If a linked
+      // calendar changes, refresh the already rendered view in the background.
+      void syncConnecteamIfConnected().then((result) => {
+        if (result.synced) void loadUserShifts(data.user.id).then(setShifts);
+      });
     });
   }, []);
   useEffect(() => {

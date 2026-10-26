@@ -1765,3 +1765,248 @@ h2 {
 .theme-dark .calendar-card .off-label {
   color: #9189a3;
 }
+
+/* The shift form is a persistent detail card: selecting a day never blocks the
+   calendar behind a modal, and the card can be closed without losing context. */
+.calendar-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.calendar-editor-layout.is-editing {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+}
+.calendar-editor-layout .calendar-card {
+  margin-top: 18px;
+}
+.calendar-editor-layout.is-editing .calendar-card {
+  min-width: 0;
+}
+.shift-editor {
+  position: sticky;
+  top: 24px;
+  overflow: hidden;
+  margin-top: 18px;
+  border-color: #e2dcff;
+  background: linear-gradient(155deg, #fff 0%, #fbfaff 58%, #f1eeff 100%);
+  box-shadow: 0 20px 48px rgba(69, 51, 132, 0.13);
+  animation: shiftCardIn 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.shift-editor:hover {
+  transform: none;
+}
+.shift-editor-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 19px 20px 16px;
+  border-bottom: 1px solid rgba(103, 80, 232, 0.12);
+}
+.shift-editor-head > div {
+  min-width: 0;
+  flex: 1;
+}
+.shift-editor-head .eyebrow {
+  margin-bottom: 4px;
+}
+.shift-editor-head h2 {
+  overflow: hidden;
+  font-size: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shift-editor-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #e6e0ff, #f3f0ff);
+  color: #6047d7;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.8), 0 5px 12px rgba(103, 80, 232, 0.13);
+}
+.shift-editor .close {
+  position: static;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  color: #837c94;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+.shift-editor .close:hover {
+  background: #eeeaff;
+  color: #5d45cf;
+  transform: rotate(90deg);
+}
+.shift-editor-body {
+  padding: 5px 20px 20px;
+}
+.shift-editor label {
+  display: block;
+  margin: 14px 0;
+  color: #494357;
+  font-size: 12px;
+  font-weight: 750;
+}
+.shift-editor input,
+.shift-editor select {
+  display: block;
+  width: 100%;
+  min-height: 43px;
+  margin-top: 7px;
+  padding: 10px 11px;
+  border: 1px solid #ddd8eb;
+  border-radius: 10px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--ink);
+  font-size: 13px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+.shift-editor input:focus,
+.shift-editor select:focus {
+  border-color: #8772ef;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(103, 80, 232, 0.12);
+}
+.shift-editor input:disabled,
+.shift-editor select:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+.shift-editor .form-grid {
+  gap: 10px;
+}
+.shift-editor-summary {
+  margin: 11px 0 4px;
+  padding: 10px 11px;
+  border: 1px solid #d8f0e8;
+  border-radius: 10px;
+  background: #effaf6;
+  color: #277663;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.shift-editor .full {
+  min-height: 48px;
+  margin-top: 8px;
+  border-radius: 12px;
+}
+.shift-editor .delete-shift {
+  margin-top: 18px;
+}
+@keyframes shiftCardIn {
+  from {
+    opacity: 0;
+    transform: translateX(22px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+.theme-dark .shift-editor {
+  border-color: #49405f;
+  background: linear-gradient(155deg, #2c2739, #211e2b);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.3);
+}
+.theme-dark .shift-editor-head {
+  border-color: #443e54;
+}
+.theme-dark .shift-editor-icon {
+  background: linear-gradient(135deg, #4a3c74, #332b50);
+  color: #cfc5ff;
+}
+.theme-dark .shift-editor label {
+  color: #d8d2e5;
+}
+.theme-dark .shift-editor input,
+.theme-dark .shift-editor select {
+  border-color: #4a4357;
+  background: #201d28;
+  color: var(--ink);
+}
+.theme-dark .shift-editor input:focus,
+.theme-dark .shift-editor select:focus {
+  border-color: #9583fa;
+  background: #24202e;
+  box-shadow: 0 0 0 4px rgba(150, 132, 250, 0.16);
+}
+.theme-dark .shift-editor .close:hover {
+  background: #3b334e;
+  color: #d4cbff;
+}
+.theme-dark .shift-editor-summary {
+  border-color: #28574d;
+  background: #1d3934;
+  color: #a6e8d8;
+}
+@media (max-width: 1050px) {
+  .calendar-editor-layout.is-editing {
+    grid-template-columns: minmax(0, 1fr) minmax(285px, 320px);
+  }
+  .calendar-editor-layout.is-editing .day {
+    min-height: 70px;
+  }
+}
+@media (max-width: 840px) {
+  .calendar-editor-layout.is-editing {
+    grid-template-columns: 1fr;
+  }
+  .calendar-editor-layout.is-editing .day {
+    min-height: 86px;
+  }
+  .shift-editor {
+    position: relative;
+    top: auto;
+    margin-top: 0;
+  }
+}
+@media (max-width: 720px) {
+  .calendar-editor-layout {
+    gap: 12px;
+  }
+  .calendar-editor-layout .calendar-card {
+    margin-top: 12px;
+  }
+  .calendar-editor-layout.is-editing .day {
+    min-height: 52px;
+  }
+  .shift-editor {
+    border-radius: 18px;
+    animation-name: shiftCardInMobile;
+  }
+  .shift-editor-head {
+    padding: 16px;
+  }
+  .shift-editor-body {
+    padding: 3px 16px 16px;
+  }
+  .shift-editor .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@keyframes shiftCardInMobile {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shift-editor,
+  .shift-editor .close,
+  .shift-editor input,
+  .shift-editor select {
+    animation: none;
+    transition: none;
+  }
+}

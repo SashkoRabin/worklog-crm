@@ -43,7 +43,9 @@ export async function loadUserShifts(userId: string) {
   if (!supabase) return [] as Shift[];
   const { data: rows } = await supabase
     .from("shifts")
-    .select("*")
+    // Keep the dashboard payload intentional; this query runs on every initial
+    // load and does not need database timestamps or unrelated future columns.
+    .select("id,work_date,store,shift_name,shift_type,hours,hourly_rate,notes,source,external_id")
     .eq("user_id", userId)
     .order("work_date", { ascending: false });
   return (rows as Shift[]) || [];

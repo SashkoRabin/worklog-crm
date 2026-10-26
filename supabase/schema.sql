@@ -24,6 +24,11 @@ create unique index shifts_connecteam_external_id
   on public.shifts (user_id, source, external_id)
   where external_id is not null;
 
+-- Covers the dashboard's most frequent request: one user's timeline, newest
+-- first. It also avoids a sort as the worklog grows.
+create index shifts_user_work_date_desc
+  on public.shifts (user_id, work_date desc);
+
 -- The value is AES-GCM encrypted before insertion. RLS limits each encrypted
 -- connection record to its owner; the cleartext link never reaches the browser.
 create table public.connecteam_connections (

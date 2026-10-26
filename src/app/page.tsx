@@ -20,6 +20,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  ClipboardList,
   Globe2,
   LogOut,
   Link2,
@@ -137,9 +138,10 @@ export default function Home() {
     [shifts, setShifts] = useState<Shift[]>(demo),
     [rate, setRate] = useState(150),
     [month, setMonth] = useState(current),
-    [dialog, setDialog] = useState<"shift" | "settings" | "quick" | "connecteam" | null>(null),
+    [dialog, setDialog] = useState<"settings" | "quick" | "connecteam" | null>(null),
     [date, setDate] = useState(today),
-    [editing, setEditing] = useState<Shift | null>(null);
+    [editing, setEditing] = useState<Shift | null>(null),
+    [isShiftEditorOpen, setIsShiftEditorOpen] = useState(false);
   const t = copy[lang];
   useEffect(() => {
     const savedLang = localStorage.getItem("worklog-lang") as Lang | null,
@@ -153,7 +155,6 @@ export default function Home() {
     client.auth.getUser().then(async ({ data }) => {
       if (!data.user) return;
       setUser(data.user);
-      await syncConnecteamIfConnected();
       const [{ data: profile }, rows] = await Promise.all([
         client
           .from("profiles")
@@ -164,6 +165,12 @@ export default function Home() {
       ]);
       setShifts(rows);
       if (profile?.hourly_rate) setRate(Number(profile.hourly_rate));
+
+      // Calendar synchronisation can take several seconds. Let the dashboard
+      // become interactive first, then refresh only if the background sync did work.
+      void syncConnecteamIfConnected().then((result) => {
+        if (result.synced) void loadUserShifts(data.user.id).then(setShifts);
+      });
     });
   }, []);
   useEffect(() => {
@@ -200,7 +207,6 @@ export default function Home() {
   });
   async function saveShift(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (editing?.source === "connecteam") return;
     const values = new FormData(e.currentTarget),
       row = {
         work_date: String(values.get("date")),
@@ -208,18 +214,39 @@ export default function Home() {
         shift_name: String(values.get("schedule")),
         shift_type: String(values.get("type")) as Shift["shift_type"],
         hours: Number(values.get("hours")),
-        hourly_rate: rate,
+        // Editing a shift must not silently replace its historical rate with
+        // today's default rate.
+        hourly_rate: editing?.hourly_rate ?? rate,
         notes: String(values.get("note")),
         source: "manual" as const,
       };
     if (editing) {
+      // A change to an imported shift turns it into a manual record. We also
+      // remember its external id, so the next calendar sync cannot re-import it.
+      const convertingConnecteam = editing.source === "connecteam",
+        databaseRow = convertingConnecteam ? { ...row, external_id: null } : row,
+        previousShift = editing;
       setShifts((all) =>
         all.map((item) =>
-          item.id === editing.id ? { ...item, ...row } : item,
+          item.id === editing.id ? { ...item, ...databaseRow } : item,
         ),
       );
-      if (supabase && user)
-        await supabase.from("shifts").update(row).eq("id", editing.id);
+      if (supabase && user) {
+        const { error } = await supabase
+          .from("shifts")
+          .update(databaseRow)
+          .eq("id", editing.id);
+        if (error) {
+          setShifts((all) =>
+            all.map((item) => (item.id === previousShift.id ? previousShift : item)),
+          );
+          console.error("Unable to save shift", error);
+          return;
+        }
+        if (convertingConnecteam && editing.external_id) {
+          await dismissConnecteamShift(user.id, editing.external_id);
+        }
+      }
     } else {
       const newShift = { ...row, id: crypto.randomUUID() };
       setShifts((all) => [newShift, ...all]);
@@ -228,13 +255,13 @@ export default function Home() {
           .from("shifts")
           .insert({ ...newShift, user_id: user.id });
     }
-    setDialog(null);
     setEditing(null);
+    setIsShiftEditorOpen(false);
   }
   async function deleteShift(shift: Shift) {
     setShifts((all) => all.filter((item) => item.id !== shift.id));
-    setDialog(null);
     setEditing(null);
+    setIsShiftEditorOpen(false);
     if (supabase && user) {
       if (shift.source === "connecteam" && shift.external_id) {
         await dismissConnecteamShift(user.id, shift.external_id);
@@ -306,7 +333,7 @@ export default function Home() {
             onClick={() => {
               setDate(today);
               setEditing(null);
-              setDialog("shift");
+              setIsShiftEditorOpen(true);
             }}
           >
             <Plus />
@@ -337,6 +364,7 @@ export default function Home() {
             }
           />
         </div>
+        <div className={`calendar-editor-layout ${isShiftEditorOpen ? "is-editing" : ""}`}>
         <section className="card calendar-card">
           <div className="card-head">
             <div>
@@ -383,7 +411,7 @@ export default function Home() {
                   onClick={() => {
                     setDate(format(day, "yyyy-MM-dd"));
                     setEditing(daily[0] || null);
-                    setDialog("shift");
+                    setIsShiftEditorOpen(true);
                   }}
                 >
                   <b>{format(day, "d")}</b>
@@ -406,6 +434,21 @@ export default function Home() {
             })}
           </div>
         </section>
+        {isShiftEditorOpen && (
+          <ShiftCard
+            key={`${editing?.id ?? "new"}-${date}`}
+            t={t}
+            editing={editing}
+            date={date}
+            onClose={() => {
+              setEditing(null);
+              setIsShiftEditorOpen(false);
+            }}
+            onSave={saveShift}
+            onDelete={deleteShift}
+          />
+        )}
+        </div>
         <section className="card recent">
           <div className="card-head">
             <div>
@@ -545,16 +588,6 @@ export default function Home() {
       {dialog === "connecteam" && (
         <ConnecteamDialog lang={lang} onClose={() => setDialog(null)} onSynced={refreshShifts} />
       )}
-      {dialog === "shift" && (
-        <ShiftDialog
-          t={t}
-          editing={editing}
-          date={date}
-          onClose={() => setDialog(null)}
-          onSave={saveShift}
-          onDelete={deleteShift}
-        />
-      )}
     </main>
   );
 }
@@ -645,7 +678,7 @@ function ConnecteamDialog({
   );
 }
 
-function ShiftDialog({
+function ShiftCard({
   t,
   editing,
   date,
@@ -660,8 +693,7 @@ function ShiftDialog({
   onSave: (event: FormEvent<HTMLFormElement>) => void;
   onDelete: (shift: Shift) => void;
 }) {
-  const initialStore =
-    stores.find((store) => store.name === editing?.store) || stores[0];
+  const initialStore = stores.find((store) => store.name === editing?.store) || stores[0];
   const initialShift = Math.max(
     0,
     initialStore.shifts.findIndex((shift) =>
@@ -669,39 +701,53 @@ function ShiftDialog({
     ),
   );
   const [storeId, setStoreId] = useState(initialStore.id),
+    [storeName, setStoreName] = useState(editing?.store ?? initialStore.name),
     [shiftIndex, setShiftIndex] = useState(initialShift),
     [hours, setHours] = useState(
       editing?.hours ?? initialStore.shifts[initialShift].hours,
+    ),
+    [schedule, setSchedule] = useState(
+      editing?.shift_name ?? `${initialStore.shifts[initialShift].start}–${initialStore.shifts[initialShift].end}`,
     );
   const store = stores.find((item) => item.id === storeId)!,
     shift = store.shifts[shiftIndex];
   const fromConnecteam = editing?.source === "connecteam";
+  const selectedSchedule = `${shift.start}–${shift.end}`;
+  const hasCustomSchedule = Boolean(
+    schedule && !store.shifts.some((item) => `${item.start}–${item.end}` === schedule),
+  );
+  const hasCustomStore = Boolean(
+    editing?.store && !stores.some((item) => item.name === editing.store),
+  );
   const selectStore = (id: string) => {
     const next = stores.find((item) => item.id === id)!;
     setStoreId(id);
+    setStoreName(next.name);
     setShiftIndex(0);
     setHours(next.shifts[0].hours);
+    setSchedule(`${next.shifts[0].start}–${next.shifts[0].end}`);
   };
   const selectShift = (index: number) => {
     setShiftIndex(index);
     setHours(store.shifts[index].hours);
+    setSchedule(`${store.shifts[index].start}–${store.shifts[index].end}`);
   };
   return (
-    <div className="overlay" onMouseDown={onClose}>
-      <form
-        className="dialog shift-dialog"
-        onMouseDown={(event) => event.stopPropagation()}
-        onSubmit={onSave}
-      >
-        <button type="button" className="close" onClick={onClose}>
+      <form className="shift-editor card" onSubmit={onSave}>
+        <div className="shift-editor-head">
+          <span className="shift-editor-icon"><ClipboardList size={18} /></span>
+          <div>
+            <p className="eyebrow">{fromConnecteam ? t.connecteam : editing ? t.saveShift : t.newShift}</p>
+            <h2>{fromConnecteam ? editing?.store : editing ? editing?.store : t.add}</h2>
+          </div>
+          <button type="button" className="close" onClick={onClose} aria-label="Close">
           <X />
         </button>
-        <div className="dialog-body">
-          <p className="eyebrow">{fromConnecteam ? t.connecteam : t.newShift}</p>
-          <h2>{fromConnecteam ? editing?.store : t.add}</h2>
+        </div>
+        <div className="shift-editor-body">
           {fromConnecteam ? (
-            <p className="subtle">
-              {editing?.shift_name} · {editing?.hours} h · {t.connecteam}
+            <p className="shift-editor-summary">
+              {editing?.shift_name} · {editing?.hours} h · {t.connecteam} → {t.manual}
             </p>
           ) : null}
           <div className="form-grid">
@@ -711,8 +757,6 @@ function ShiftDialog({
                 name="date"
                 type="date"
                 defaultValue={editing?.work_date || date}
-                readOnly={fromConnecteam}
-                disabled={fromConnecteam}
               />
             </label>
             <label>
@@ -720,7 +764,6 @@ function ShiftDialog({
               <select
                 name="type"
                 defaultValue={editing?.shift_type || "worked"}
-                disabled={fromConnecteam}
               >
                 <option value="worked">{t.workedType}</option>
                 <option value="replacement">{t.replacement}</option>
@@ -732,14 +775,14 @@ function ShiftDialog({
             {t.store}
             <select
               name="store"
-              value={fromConnecteam ? editing?.store ?? store.name : store.name}
-              disabled={fromConnecteam}
+              value={storeName}
               onChange={(event) =>
                 selectStore(
                   stores.find((item) => item.name === event.target.value)!.id,
                 )
               }
             >
+              {hasCustomStore && <option value={editing!.store}>{editing!.store}</option>}
               {stores.map((item) => (
                 <option value={item.name} key={item.id}>
                   {item.name}
@@ -749,30 +792,26 @@ function ShiftDialog({
           </label>
           <label>
             {t.schedule}
-            {fromConnecteam ? (
-              <input name="schedule" readOnly disabled value={editing?.shift_name ?? ""} />
-            ) : (
-              <select
-                name="schedule"
-                value={`${shift.start}–${shift.end}`}
-                onChange={(event) =>
-                  selectShift(
-                    store.shifts.findIndex(
-                      (item) => `${item.start}–${item.end}` === event.target.value,
-                    ),
-                  )
-                }
-              >
-                {store.shifts.map((item) => (
-                  <option
-                    value={`${item.start}–${item.end}`}
-                    key={`${item.start}-${item.end}`}
-                  >
-                    {item.start}–{item.end} · {item.hours} h
-                  </option>
-                ))}
-              </select>
-            )}
+            <select
+              name="schedule"
+              value={schedule || selectedSchedule}
+              onChange={(event) => {
+                const nextIndex = store.shifts.findIndex(
+                  (item) => `${item.start}–${item.end}` === event.target.value,
+                );
+                if (nextIndex >= 0) selectShift(nextIndex);
+              }}
+            >
+              {hasCustomSchedule && <option value={schedule}>{schedule}</option>}
+              {store.shifts.map((item) => (
+                <option
+                  value={`${item.start}–${item.end}`}
+                  key={`${item.start}-${item.end}`}
+                >
+                  {item.start}–{item.end} · {item.hours} h
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             {t.actual}
@@ -781,9 +820,7 @@ function ShiftDialog({
               type="number"
               step="0.5"
               min="0"
-              value={fromConnecteam ? editing?.hours ?? hours : hours}
-              readOnly={fromConnecteam}
-              disabled={fromConnecteam}
+              value={hours}
               onChange={(event) => setHours(Number(event.target.value))}
             />
           </label>
@@ -792,8 +829,6 @@ function ShiftDialog({
             <input
               name="note"
               defaultValue={editing?.notes || ""}
-              readOnly={fromConnecteam}
-              disabled={fromConnecteam}
             />
           </label>
           {editing && (
@@ -805,15 +840,8 @@ function ShiftDialog({
               {t.deleteShift}
             </button>
           )}
-          {fromConnecteam ? (
-            <button type="button" className="primary full" onClick={onClose}>
-              {t.save}
-            </button>
-          ) : (
-            <button className="primary full">{t.saveShift}</button>
-          )}
+          <button className="primary full">{t.saveShift}</button>
         </div>
       </form>
-    </div>
   );
 }
