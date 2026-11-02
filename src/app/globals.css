@@ -1862,6 +1862,76 @@ h2 {
 .shift-editor-body {
   padding: 5px 20px 20px;
 }
+.day-shift-list {
+  margin: 12px 0 16px;
+  padding: 12px;
+  border: 1px solid #e3def3;
+  border-radius: 12px;
+  background: rgba(247, 245, 255, 0.72);
+}
+.day-shift-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 9px;
+  color: #625a74;
+  font-size: 12px;
+  font-weight: 750;
+}
+.day-shift-list-head button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: 7px;
+  color: #5d45cf;
+  font: inherit;
+}
+.day-shift-list-head button:hover {
+  background: #ebe7ff;
+}
+.day-shift-options {
+  display: grid;
+  gap: 6px;
+}
+.day-shift-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: #fff;
+  color: #373141;
+  text-align: left;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+.day-shift-option:hover {
+  border-color: #cfc5fb;
+  background: #faf9ff;
+  transform: translateY(-1px);
+}
+.day-shift-option.selected {
+  border-color: #8975ee;
+  background: #eeebff;
+}
+.day-shift-option span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.day-shift-option b,
+.day-shift-option small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.day-shift-option b { font-size: 12px; }
+.day-shift-option small { color: #81798f; font-size: 11px; }
+.day-shift-option strong { flex: 0 0 auto; color: #5d45cf; font-size: 12px; }
 .shift-editor label {
   display: block;
   margin: 14px 0;
@@ -1962,6 +2032,21 @@ h2 {
   background: #1d3934;
   color: #a6e8d8;
 }
+.theme-dark .day-shift-list {
+  border-color: #49405f;
+  background: #262130;
+}
+.theme-dark .day-shift-list-head { color: #c8c0d5; }
+.theme-dark .day-shift-list-head button { color: #b9adff; }
+.theme-dark .day-shift-list-head button:hover { background: #393149; }
+.theme-dark .day-shift-option {
+  background: #201d28;
+  color: #e6e0ed;
+}
+.theme-dark .day-shift-option:hover { background: #292332; border-color: #685a94; }
+.theme-dark .day-shift-option.selected { background: #383050; border-color: #9583fa; }
+.theme-dark .day-shift-option small { color: #aaa1b8; }
+.theme-dark .day-shift-option strong { color: #c4b9ff; }
 @media (max-width: 1050px) {
   .calendar-editor-layout.is-editing {
     grid-template-columns: minmax(0, 1fr) minmax(285px, 320px);
@@ -2002,6 +2087,10 @@ h2 {
   }
   .shift-editor-body {
     padding: 3px 16px 16px;
+  }
+  .day-shift-list {
+    margin: 11px 0 14px;
+    padding: 10px;
   }
   .shift-editor .form-grid {
     grid-template-columns: 1fr;

@@ -225,6 +225,22 @@ export default function Home() {
     start: startOfMonth(month),
     end: endOfMonth(month),
   });
+  const upcomingShifts = useMemo(
+    () =>
+      shifts
+        .filter((shift) => shift.work_date >= today)
+        .sort(
+          (left, right) =>
+            left.work_date.localeCompare(right.work_date) ||
+            left.shift_name.localeCompare(right.shift_name),
+        ),
+    [shifts],
+  );
+  const upcomingShiftsTitle = {
+    en: "Upcoming shifts",
+    ru: "Предстоящие смены",
+    cs: "Nadcházející směny",
+  }[lang];
   async function saveShift(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const values = new FormData(e.currentTarget),
@@ -459,7 +475,10 @@ export default function Home() {
                   key={day.toString()}
                   onClick={() => {
                     setDate(format(day, "yyyy-MM-dd"));
-                    setEditing(daily[0] || null);
+                    // A day can contain more than one shift. Open the day
+                    // overview first, so a click never silently picks the
+                    // first record and hides the rest.
+                    setEditing(null);
                     setIsShiftEditorOpen(true);
                   }}
                 >
@@ -489,6 +508,8 @@ export default function Home() {
             t={t}
             editing={editing}
             date={date}
+            dayShifts={shifts.filter((shift) => shift.work_date === date)}
+            onSelectShift={setEditing}
             onClose={() => {
               setEditing(null);
               setIsShiftEditorOpen(false);
@@ -501,7 +522,7 @@ export default function Home() {
         <section className="card recent">
           <div className="card-head">
             <div>
-              <h2>{t.recent}</h2>
+              <h2>{upcomingShiftsTitle}</h2>
               <p>
                 {t.defaultRate}: {money(rate)}/h
               </p>
@@ -510,8 +531,8 @@ export default function Home() {
               {t.changeRate}
             </button>
           </div>
-          {shifts.length ? (
-            shifts.slice(0, 5).map((shift) => (
+          {upcomingShifts.length ? (
+            upcomingShifts.slice(0, 5).map((shift) => (
               <div className="shift-row" key={shift.id}>
                 <div className="date-box">
                   <b>{format(parseISO(shift.work_date), "dd")}</b>
@@ -731,6 +752,8 @@ function ShiftCard({
   t,
   editing,
   date,
+  dayShifts,
+  onSelectShift,
   onClose,
   onSave,
   onDelete,
@@ -738,6 +761,8 @@ function ShiftCard({
   t: (typeof copy)[Lang];
   editing: Shift | null;
   date: string;
+  dayShifts: Shift[];
+  onSelectShift: (shift: Shift | null) => void;
   onClose: () => void;
   onSave: (event: FormEvent<HTMLFormElement>) => void;
   onDelete: (shift: Shift) => void;
@@ -794,6 +819,33 @@ function ShiftCard({
         </button>
         </div>
         <div className="shift-editor-body">
+          {dayShifts.length > 0 && (
+            <section className="day-shift-list" aria-label="Shifts for selected day">
+              <div className="day-shift-list-head">
+                <span>{dayShifts.length} {t.shifts}</span>
+                <button type="button" onClick={() => onSelectShift(null)}>
+                  <Plus size={14} aria-hidden="true" /> {t.add}
+                </button>
+              </div>
+              <div className="day-shift-options">
+                {dayShifts.map((item) => (
+                  <button
+                    type="button"
+                    className={`day-shift-option ${editing?.id === item.id ? "selected" : ""}`}
+                    key={item.id}
+                    onClick={() => onSelectShift(item)}
+                    aria-pressed={editing?.id === item.id}
+                  >
+                    <span>
+                      <b>{item.store}</b>
+                      <small>{item.shift_name}</small>
+                    </span>
+                    <strong>{item.hours} h</strong>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
           {fromConnecteam ? (
             <p className="shift-editor-summary">
               {editing?.shift_name} · {editing?.hours} h · {t.connecteam} → {t.manual}
