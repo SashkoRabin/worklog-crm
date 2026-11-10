@@ -29,7 +29,8 @@ create index if not exists telegram_link_tokens_expiry_idx
 
 create table if not exists public.telegram_reminders (
   id uuid primary key default gen_random_uuid(),
-  shift_id uuid not null references public.shifts(id) on delete cascade,
+  shift_id uuid references public.shifts(id) on delete set null,
+  shift_key text not null,
   user_id uuid not null references auth.users(id) on delete cascade,
   scheduled_for timestamptz not null,
   status text not null default 'processing' check (status in ('processing','sent','failed')),
@@ -37,7 +38,7 @@ create table if not exists public.telegram_reminders (
   sent_at timestamptz,
   last_error text,
   created_at timestamptz not null default now(),
-  unique (shift_id, scheduled_for)
+  unique (user_id, shift_key, scheduled_for)
 );
 create index if not exists telegram_reminders_user_idx on public.telegram_reminders(user_id,created_at desc);
 
