@@ -38,7 +38,7 @@ curl -X POST "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
 
 В BotFather настройте домен Mini App для `worklog-crm.vercel.app`. Пользователь запускает бота командой `/start`, выбирает язык (English / Русский / Čeština), получает ссылку на сайт и интерактивное руководство. В разделе Telegram на сайте пользователь создаёт одноразовую ссылку привязки аккаунта. После привязки напоминания включены по умолчанию.
 
-Vercel Cron вызывает `/api/telegram/reminders` каждую минуту и передаёт `Authorization: Bearer <CRON_SECRET>`. Убедитесь, что тариф Vercel поддерживает cron с минутным интервалом. Напоминание рассчитывается по локальному часовому поясу Telegram-профиля (по умолчанию `Europe/Prague`) и времени в названии смены формата `10:00–18:00`. Настройка по умолчанию — за 120 минут. Поддерживаются также 60 и 30 минут.
+Vercel Cron вызывает `/api/telegram/reminders` каждую минуту и передаёт `Authorization: Bearer <CRON_SECRET>`. Для точного минутного расписания нужен Vercel Pro или Enterprise: на Hobby cron запускается не чаще одного раза в день и с часовым допуском. См. [официальные ограничения Vercel](https://vercel.com/docs/schedules/cron-jobs/usage-and-pricing). Напоминание рассчитывается по локальному часовому поясу Telegram-профиля (по умолчанию `Europe/Prague`) и времени в названии смены формата `10:00–18:00`. Настройка по умолчанию — за 120 минут. Поддерживаются также 60 и 30 минут.
 
 Не публикуйте `TELEGRAM_BOT_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET` и webhook secret в клиентском коде или переменных с префиксом `NEXT_PUBLIC_`.
 
