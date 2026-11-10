@@ -65,14 +65,19 @@ export async function GET(request:Request) {
       if(age<0 || age>10*60_000 || starts.getTime()<=Date.now()){skipped++;continue;}
       const scheduledFor=scheduled.toISOString();
       const {data:existing,error:existingError}=await db.from("telegram_reminders")
-        .select("id,status,attempts").eq("shift_id",shift.id).eq("scheduled_for",scheduledFor).maybeSingle();
+        .select("id,status,attempts,created_at").eq("shift_id",shift.id).eq("scheduled_for",scheduledFor).maybeSingle();
       if(existingError) throw existingError;
       let reminderId:string|null=null;
       if(existing) {
-        if(existing.status!=="failed" || Number(existing.attempts)>=3){skipped++;continue;}
-        const {data:retry,error:retryError}=await db.from("telegram_reminders")
+        const staleProcessing=existing.status==="processing" && Date.now()-new Date(existing.created_at).getTime()>3*60_000;
+        if((existing.status!=="failed" && !staleProcessing) || Number(existing.attempts)>=3){skipped++;continue;}
+        let retryQuery=db.from("telegram_reminders")
           .update({status:"processing",attempts:Number(existing.attempts)+1,last_error:null})
-          .eq("id",existing.id).eq("status","failed").select("id").maybeSingle();
+          .eq("id",existing.id);
+        retryQuery=staleProcessing
+          ? retryQuery.eq("status","processing").lt("created_at",new Date(Date.now()-3*60_000).toISOString())
+          : retryQuery.eq("status","failed");
+        const {data:retry,error:retryError}=await retryQuery.select("id").maybeSingle();
         if(retryError) throw retryError;
         reminderId=retry?.id||null;
       } else {
