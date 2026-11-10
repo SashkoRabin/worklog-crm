@@ -64,12 +64,26 @@ export async function GET(request:Request) {
       const age=Date.now()-scheduled.getTime();
       if(age<0 || age>10*60_000 || starts.getTime()<=Date.now()){skipped++;continue;}
       const scheduledFor=scheduled.toISOString();
-      const {data:created,error:createError}=await db.from("telegram_reminders")
-        .insert({shift_id:shift.id,user_id:shift.user_id,scheduled_for:scheduledFor,status:"processing",attempts:1})
-        .select("id").maybeSingle();
-      if(createError?.code==="23505"){skipped++;continue;}
-      if(createError) throw createError;
-      if(!created){skipped++;continue;}
+      const {data:existing,error:existingError}=await db.from("telegram_reminders")
+        .select("id,status,attempts").eq("shift_id",shift.id).eq("scheduled_for",scheduledFor).maybeSingle();
+      if(existingError) throw existingError;
+      let reminderId:string|null=null;
+      if(existing) {
+        if(existing.status!=="failed" || Number(existing.attempts)>=3){skipped++;continue;}
+        const {data:retry,error:retryError}=await db.from("telegram_reminders")
+          .update({status:"processing",attempts:Number(existing.attempts)+1,last_error:null})
+          .eq("id",existing.id).eq("status","failed").select("id").maybeSingle();
+        if(retryError) throw retryError;
+        reminderId=retry?.id||null;
+      } else {
+        const {data:created,error:createError}=await db.from("telegram_reminders")
+          .insert({shift_id:shift.id,user_id:shift.user_id,scheduled_for:scheduledFor,status:"processing",attempts:1})
+          .select("id").maybeSingle();
+        if(createError?.code==="23505"){skipped++;continue;}
+        if(createError) throw createError;
+        reminderId=created?.id||null;
+      }
+      if(!reminderId){skipped++;continue;}
       try {
         const lang=(account.language in templates?account.language:"en") as Lang;
         await telegramApi("sendMessage",{
@@ -78,7 +92,7 @@ export async function GET(request:Request) {
           parse_mode:"HTML",
           reply_markup:{inline_keyboard:[[{text:lang==="ru"?"Открыть WorkLog":lang==="cs"?"Otevřít WorkLog":"Open WorkLog",web_app:{url:process.env.NEXT_PUBLIC_APP_URL!}}]]},
         });
-        await db.from("telegram_reminders").update({status:"sent",sent_at:new Date().toISOString()}).eq("id",created.id);
+        await db.from("telegram_reminders").update({status:"sent",sent_at:new Date().toISOString()}).eq("id",reminderId);
         sent++;
       } catch(error) {
         await db.from("telegram_reminders").update({status:"failed",last_error:error instanceof Error?error.message.slice(0,500):"Delivery failed"}).eq("id",created.id);
