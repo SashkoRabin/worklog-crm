@@ -215,7 +215,8 @@
   text-decoration: none;
 }
 .sidebar nav a:not(.active):hover,
-.sidebar-bottom button:hover {
+ .sidebar-bottom button:hover,
+.sidebar-bottom a:hover {
   background: #322e3d;
   color: #fff;
 }
@@ -548,7 +549,8 @@ nav {
   gap: 8px;
 }
 nav a,
-.sidebar-bottom button {
+.sidebar-bottom button,
+.sidebar-bottom a {
   display: flex;
   align-items: center;
   gap: 13px;
@@ -557,6 +559,8 @@ nav a,
   border-radius: 10px;
   font-size: 14px;
   text-align: left;
+  line-height: 20px;
+  text-decoration: none;
 }
 nav a svg,
 .sidebar-bottom svg {
