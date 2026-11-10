@@ -28,6 +28,7 @@ import {
   Moon,
   Plus,
   Settings2,
+  Send,
   Sun,
   WalletCards,
   X,
@@ -376,6 +377,10 @@ export default function Home() {
             <Settings2 />
             {t.settings}
           </button>
+          <Link href="/telegram">
+            <Send />
+            Telegram
+          </Link>
           {user && (
             <button onClick={() => supabase?.auth.signOut()}>
               <LogOut />
@@ -608,6 +613,9 @@ export default function Home() {
             <button type="button" className="setting-link" onClick={() => setDialog("settings")}>
               {t.changeRate}
             </button>
+            <Link href="/telegram" className="setting-link">
+              Telegram Assistant
+            </Link>
             <button type="button" className="connecteam-cta compact" onClick={() => setDialog("connecteam")}>
               <Link2 />
               <span><b>{connecteamText[lang].title}</b><small>Calendar Sync</small></span>
@@ -642,6 +650,11 @@ export default function Home() {
                 {t.rate}
                 <input name="rate" type="number" min="0" defaultValue={rate} />
               </label>
+              <Link href="/telegram" className="connecteam-cta">
+                <span className="connecteam-cta-icon"><Send /></span>
+                <span><b>Telegram Assistant</b><small>Shift reminders</small></span>
+                <span className="connecteam-cta-arrow" aria-hidden="true">→</span>
+              </Link>
               <button type="button" className="connecteam-cta" onClick={() => setDialog("connecteam")}>
                 <span className="connecteam-cta-icon"><Link2 /></span>
                 <span>
