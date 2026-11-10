@@ -570,6 +570,7 @@ nav a.active {
   margin-top: auto;
   display: grid;
   gap: 4px;
+  padding: 12px 14px;
 }
 .sidebar-bottom small {
   color: #706b7e;
