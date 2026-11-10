@@ -3,7 +3,7 @@ import { createAdminClient, telegramApi } from "@/lib/telegram-server";
 
 export const runtime = "nodejs";
 type Lang = "en" | "ru" | "cs";
-type Shift = { id:string; user_id:string; work_date:string; store:string; shift_name:string };
+type Shift = { id:string; user_id:string; work_date:string; store:string; shift_name:string; source:string; external_id:string|null };
 type Account = { linked_user_id:string; chat_id:number; language:Lang; reminders_enabled:boolean; reminder_minutes:number; timezone:string };
 
 function escapeHtml(value:string) {
@@ -39,7 +39,7 @@ export async function GET(request:Request) {
     const from=new Date(today.getTime()-86_400_000).toISOString().slice(0,10);
     const to=new Date(today.getTime()+3*86_400_000).toISOString().slice(0,10);
     const {data:shifts,error:shiftError}=await db.from("shifts")
-      .select("id,user_id,work_date,store,shift_name")
+      .select("id,user_id,work_date,store,shift_name,source,external_id")
       .gte("work_date",from).lte("work_date",to);
     if(shiftError) throw shiftError;
     const rows=(shifts||[]) as Shift[];
@@ -64,8 +64,11 @@ export async function GET(request:Request) {
       const age=Date.now()-scheduled.getTime();
       if(age<0 || age>10*60_000 || starts.getTime()<=Date.now()){skipped++;continue;}
       const scheduledFor=scheduled.toISOString();
+      const shiftKey=shift.source==="connecteam" && shift.external_id
+        ? `connecteam:${shift.external_id}`
+        : `manual:${shift.id}`;
       const {data:existing,error:existingError}=await db.from("telegram_reminders")
-        .select("id,status,attempts,created_at").eq("shift_id",shift.id).eq("scheduled_for",scheduledFor).maybeSingle();
+        .select("id,status,attempts,created_at").eq("user_id",shift.user_id).eq("shift_key",shiftKey).eq("scheduled_for",scheduledFor).maybeSingle();
       if(existingError) throw existingError;
       let reminderId:string|null=null;
       if(existing) {
@@ -82,7 +85,7 @@ export async function GET(request:Request) {
         reminderId=retry?.id||null;
       } else {
         const {data:created,error:createError}=await db.from("telegram_reminders")
-          .insert({shift_id:shift.id,user_id:shift.user_id,scheduled_for:scheduledFor,status:"processing",attempts:1})
+          .insert({shift_id:shift.id,shift_key:shiftKey,user_id:shift.user_id,scheduled_for:scheduledFor,status:"processing",attempts:1})
           .select("id").maybeSingle();
         if(createError?.code==="23505"){skipped++;continue;}
         if(createError) throw createError;
