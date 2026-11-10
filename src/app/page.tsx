@@ -28,6 +28,7 @@ import {
   Moon,
   Plus,
   Settings2,
+  Send,
   Sun,
   WalletCards,
   X,
@@ -376,6 +377,10 @@ export default function Home() {
             <Settings2 />
             {t.settings}
           </button>
+          <Link href="/telegram">
+            <Send />
+            Telegram
+          </Link>
           {user && (
             <button onClick={() => supabase?.auth.signOut()}>
               <LogOut />
