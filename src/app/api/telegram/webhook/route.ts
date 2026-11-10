@@ -12,7 +12,7 @@ type Update = {
 const copy = {
   en: {
     choose: "Welcome to WorkLog! Choose your language.",
-    welcome: "Welcome to WorkLog! 🚀\n\nManage shifts, track actual hours and understand your earnings. Open the website and use this bot as your guide.",
+    welcome: "Welcome to WorkLog! 🚀\n\nManage shifts, track actual hours and understand your earnings. Open the website and use this bot as your guide. To activate reminders, sign in, open Telegram in WorkLog settings and connect this chat.",
     open: "Open WorkLog", guide: "User guide", calendar: "Calendar & shifts", connecteam: "Connect Connecteam",
     earnings: "Hours & earnings", reminders: "Shift reminders", language: "Change language",
     on: "Turn reminders off", off: "Turn reminders on", enabled: "🔔 Reminders enabled. I’ll remind you 2 hours before each shift.",
@@ -22,11 +22,11 @@ const copy = {
     guideCalendar: "<b>Calendar & shifts</b>\nSelect a date to add or edit a shift. Enter workplace, shift type, hours and rate. Planned Connecteam shifts are separate from actual work. Only recorded work contributes to earned income.",
     guideConnecteam: "<b>Connecteam</b>\nOpen WorkLog → Settings → Connecteam. Paste your personal Calendar Sync link and tap Connect & sync. Imported shifts are planned shifts, not confirmed earnings.",
     guideEarnings: "<b>Hours & earnings</b>\nEarnings are calculated from recorded hours multiplied by the hourly rate saved on each shift. Check your default rate in Settings. Analytics shows monthly hours and income.",
-    guideReminders: "<b>Shift reminders</b>\nAfter linking your account, reminders are enabled by default. I’ll message you 2 hours before a shift. Change this setting in the bot menu or WorkLog → Telegram.",
+    guideReminders: "<b>Shift reminders</b>\nAfter linking your account, reminders are enabled by default. I’ll message you 2 hours before a shift. To link this chat, open WorkLog → Telegram, generate a link and follow it. Change this setting in the bot menu or WorkLog → Telegram.",
   },
   ru: {
     choose: "Добро пожаловать в WorkLog! Выбери язык.",
-    welcome: "Добро пожаловать в WorkLog! 🚀\n\nУправляй сменами, учитывай фактические часы и следи за заработком. Открой сайт и используй бота как персонального помощника.",
+    welcome: "Добро пожаловать в WorkLog! 🚀\n\nУправляй сменами, учитывай фактические часы и следи за заработком. Открой сайт и используй бота как персонального помощника. Чтобы активировать напоминания, войди в WorkLog, открой раздел Telegram в настройках и привяжи этот чат.",
     open: "Открыть WorkLog", guide: "Руководство", calendar: "Календарь и смены", connecteam: "Подключение Connecteam",
     earnings: "Часы и заработок", reminders: "Напоминания о сменах", language: "Изменить язык",
     on: "Выключить напоминания", off: "Включить напоминания", enabled: "🔔 Напоминания включены. Буду писать за 2 часа до каждой смены.",
@@ -40,7 +40,7 @@ const copy = {
   },
   cs: {
     choose: "Vítej ve WorkLogu! Vyber si jazyk.",
-    welcome: "Vítej ve WorkLogu! 🚀\n\nSpravuj směny, eviduj skutečně odpracované hodiny a sleduj svůj výdělek. Otevři web a používej tohoto bota jako průvodce.",
+    welcome: "Vítej ve WorkLogu! 🚀\n\nSpravuj směny, eviduj skutečně odpracované hodiny a sleduj svůj výdělek. Otevři web a používej tohoto bota jako průvodce. Pro aktivaci připomenutí se přihlas do WorkLogu, otevři Telegram v nastavení a propoj tento chat.",
     open: "Otevřít WorkLog", guide: "Uživatelský návod", calendar: "Kalendář a směny", connecteam: "Připojení Connecteam",
     earnings: "Hodiny a výdělek", reminders: "Připomenutí směn", language: "Změnit jazyk",
     on: "Vypnout připomenutí", off: "Zapnout připomenutí", enabled: "🔔 Připomenutí jsou zapnutá. Upozorním tě 2 hodiny před směnou.",
@@ -50,7 +50,7 @@ const copy = {
     guideCalendar: "<b>Kalendář a směny</b>\nVyber datum pro přidání nebo úpravu směny. Zadej pracoviště, typ směny, hodiny a sazbu. Plánované směny Connecteam jsou oddělené od skutečné práce. Výdělek vychází pouze ze zaznamenaných hodin.",
     guideConnecteam: "<b>Connecteam</b>\nOtevři WorkLog → Nastavení → Connecteam. Vlož osobní odkaz Calendar Sync a klikni na Připojit a synchronizovat. Importované směny jsou plánované, nikoli potvrzený výdělek.",
     guideEarnings: "<b>Hodiny a výdělek</b>\nVýdělek se počítá jako skutečně odpracované hodiny × sazba uložená u směny. Výchozí sazbu najdeš v Nastavení. Analytika zobrazuje měsíční hodiny a příjmy.",
-    guideReminders: "<b>Připomenutí směn</b>\nPo propojení účtu jsou připomenutí ve výchozím nastavení zapnutá. Napíšu ti 2 hodiny před směnou. Nastavení změníš v nabídce bota nebo WorkLog → Telegram.",
+    guideReminders: "<b>Připomenutí směn</b>\nPo propojení účtu jsou připomenutí ve výchozím nastavení zapnutá. Napíšu ti 2 hodiny před směnou. Propojení dokončíš ve WorkLog → Telegram vytvořením odkazu. Nastavení změníš v nabídce bota nebo WorkLog → Telegram.",
   },
 } as const;
 function matchSecret(a: string | null, b: string) { if (!a) return false; const x=Buffer.from(a), y=Buffer.from(b); return x.length===y.length && timingSafeEqual(x,y); }
