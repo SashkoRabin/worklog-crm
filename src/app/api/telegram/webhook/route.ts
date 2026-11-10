@@ -109,7 +109,13 @@ export async function POST(request: Request) {
       let lang=account.language as Lang;
       if(q.data?.startsWith("lang:")) {
         const value=q.data.slice(5) as Lang;
-        if(value in copy) { lang=value; await db.from("telegram_accounts").update({language:lang}).eq("telegram_user_id",q.from.id); await telegramApi("answerCallbackQuery",{callback_query_id:q.id}); await menu(chat,lang,account.reminders_enabled); }
+        if(value in copy) {
+          lang=value;
+          const {error:languageError}=await db.from("telegram_accounts").update({language:lang}).eq("telegram_user_id",q.from.id);
+          if(languageError) throw languageError;
+          await telegramApi("answerCallbackQuery",{callback_query_id:q.id});
+          await menu(chat,lang,account.reminders_enabled);
+        }
       } else if(q.data==="language:choose") {
         await telegramApi("answerCallbackQuery",{callback_query_id:q.id});
         await telegramApi("sendMessage",{chat_id:chat,text:copy.en.choose,reply_markup:{inline_keyboard:[[{text:"🇬🇧 English",callback_data:"lang:en"},{text:"🇷🇺 Русский",callback_data:"lang:ru"},{text:"🇨🇿 Čeština",callback_data:"lang:cs"}]]}});
@@ -120,7 +126,8 @@ export async function POST(request: Request) {
         await telegramApi("sendMessage",{chat_id:chat,text:guide,parse_mode:"HTML",reply_markup:{inline_keyboard:[[{text:copy[lang].open,web_app:{url:process.env.NEXT_PUBLIC_APP_URL!}}]]}});
       } else if(q.data==="reminders:toggle") {
         const enabled=!account.reminders_enabled;
-        await db.from("telegram_accounts").update({reminders_enabled:enabled}).eq("telegram_user_id",q.from.id);
+        const {error:toggleError}=await db.from("telegram_accounts").update({reminders_enabled:enabled}).eq("telegram_user_id",q.from.id);
+        if(toggleError) throw toggleError;
         await telegramApi("answerCallbackQuery",{callback_query_id:q.id});
         await telegramApi("sendMessage",{chat_id:chat,text:enabled?copy[lang].enabled:copy[lang].disabled});
         await menu(chat,lang,enabled);
