@@ -72,7 +72,7 @@ export async function GET(request:Request) {
         const staleProcessing=existing.status==="processing" && Date.now()-new Date(existing.created_at).getTime()>3*60_000;
         if((existing.status!=="failed" && !staleProcessing) || Number(existing.attempts)>=3){skipped++;continue;}
         let retryQuery=db.from("telegram_reminders")
-          .update({status:"processing",attempts:Number(existing.attempts)+1,last_error:null})
+          .update({status:"processing",attempts:Number(existing.attempts)+1,last_error:null,created_at:new Date().toISOString()})
           .eq("id",existing.id);
         retryQuery=staleProcessing
           ? retryQuery.eq("status","processing").lt("created_at",new Date(Date.now()-3*60_000).toISOString())
