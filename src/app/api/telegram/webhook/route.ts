@@ -91,7 +91,7 @@ export async function POST(request: Request) {
             const {error:linkError}=await db.from("telegram_accounts").update({linked_user_id:link.user_id,linked_at:new Date().toISOString(),reminders_enabled:true,reminder_minutes:120}).eq("telegram_user_id",id);
             if(linkError) throw linkError;
             await telegramApi("sendMessage",{chat_id:chat,text:t.linked});
-            await menu(chat,t===copy.ru?"ru":t===copy.cs?"cs":"en",true);
+            await menu(chat,account.language as Lang,true);
           }
         }
       } else if(msg.text?.startsWith("/start")) {
