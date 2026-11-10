@@ -100,7 +100,7 @@ export async function GET(request:Request) {
         await db.from("telegram_reminders").update({status:"sent",sent_at:new Date().toISOString()}).eq("id",reminderId);
         sent++;
       } catch(error) {
-        await db.from("telegram_reminders").update({status:"failed",last_error:error instanceof Error?error.message.slice(0,500):"Delivery failed"}).eq("id",created.id);
+        await db.from("telegram_reminders").update({status:"failed",last_error:error instanceof Error?error.message.slice(0,500):"Delivery failed"}).eq("id",reminderId);
         failed++;
       }
     }
