@@ -1,6 +1,6 @@
 -- Schedule Telegram shift reminders with Supabase Cron.
 -- Before running:
--- 1. Enable pg_cron and pg_net in Supabase Database -> Extensions.
+-- 1. Enable pg_cron, pg_net and Vault in Supabase Database -> Extensions (Vault is often already enabled).
 -- 2. Add the same CRON_SECRET value to Vercel Environment Variables.
 -- 3. Replace the two placeholder values below with your deployed endpoint and CRON_SECRET.
 -- Store secrets in Supabase Vault; do not commit real secrets to Git.
