@@ -150,13 +150,21 @@ export async function showStaffEmployeeWeek(chat: number, userId: string, page =
   const weekday = new Date(`${today}T00:00:00Z`).getUTCDay();
   const monday = addDays(today, -((weekday + 6) % 7));
   const sunday = addDays(monday, 6);
-  const { data, error } = await db.from("connecteam_staff_shifts")
-    .select("connecteam_shift_id,work_date,location,start_time,end_time,start_epoch,end_epoch,user_ids")
-    .gte("work_date", monday)
-    .lte("work_date", sunday)
-    .order("work_date", { ascending: true })
-    .order("start_time", { ascending: true });
+  const monthStart = `${today.slice(0, 7)}-01`;
+  const [{ data, error }, { data: monthData, error: monthError }] = await Promise.all([
+    db.from("connecteam_staff_shifts")
+      .select("connecteam_shift_id,work_date,location,start_time,end_time,start_epoch,end_epoch,user_ids")
+      .gte("work_date", monday)
+      .lte("work_date", sunday)
+      .order("work_date", { ascending: true })
+      .order("start_time", { ascending: true }),
+    db.from("connecteam_staff_shifts")
+      .select("connecteam_shift_id,start_epoch,end_epoch,user_ids")
+      .gte("work_date", monthStart)
+      .lte("work_date", today),
+  ]);
   if (error) throw error;
+  if (monthError) throw monthError;
 
   const shifts = ((data || []) as StaffShift[])
     .filter(shift => (shift.user_ids || []).map(String).includes(userId))
@@ -168,7 +176,13 @@ export async function showStaffEmployeeWeek(chat: number, userId: string, page =
     seen.add(key);
     return true;
   });
-  const totalHours = uniqueShifts.reduce((sum, shift) => {
+  const monthShifts = ((monthData || []) as StaffShift[])
+    .filter(shift => (shift.user_ids || []).map(String).includes(userId));
+  const seenMonthShifts = new Set<string>();
+  const totalMonthHours = monthShifts.reduce((sum, shift) => {
+    const key = shift.connecteam_shift_id || `${shift.start_epoch}:${shift.end_epoch}`;
+    if (seenMonthShifts.has(key)) return sum;
+    seenMonthShifts.add(key);
     const start = Number(shift.start_epoch), end = Number(shift.end_epoch);
     return Number.isFinite(start) && Number.isFinite(end) && end > start ? sum + (end - start) / 3600 : sum;
   }, 0);
@@ -192,7 +206,7 @@ export async function showStaffEmployeeWeek(chat: number, userId: string, page =
       lines.push(`• ${escapeHtml(shift.start_time)}–${escapeHtml(shift.end_time)} · ${escapeHtml(shift.location)}`);
     }
   }
-  lines.push("", `⏱ <b>Всего часов за неделю: ${number(totalHours)} ч</b>`, "<i>Учитывается полная продолжительность смены от начала до конца.</i>");
+  lines.push("", `⏱ <b>Всего часов за месяц: ${number(totalMonthHours)} ч</b>`);
   await renderStaff(chat, messageId, lines.join("\n"), [
     [{ text: "⬅️ К списку сотрудников", callback_data: `staff:employees:${page}` }],
     [{ text: "🏠 В меню", callback_data: "staff:menu" }],
