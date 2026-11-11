@@ -81,9 +81,8 @@ export async function handleTelegramWebhook(request: Request) {
         await telegramApi("sendMessage", { chat_id: chat, text: t.menuHint, reply_markup: menuKeyboard(lang, account.reminders_enabled) });
       } else if (msg.text === t.guideMenu) {
         await showGuide(chat, lang);
-      } else if (msg.text === t.scheduleMenu) {\n        await showScheduleMenu(chat, lang);\n      } else if (msg.text === t.schedule) {
-        if (!account.linked_user_id) await telegramApi("sendMessage", { chat_id: chat, text: lang === "ru" ? "Сначала привяжите Telegram к аккаунту WorkLog на сайте → Telegram." : "Connect your Telegram account to WorkLog first." });
-        else await showSchedule(chat, account.linked_user_id, lang, account.timezone || "Europe/Prague");
+      } else if (msg.text === t.scheduleMenu || msg.text === t.schedule) {
+        await showScheduleMenu(chat, lang);
       } else if (msg.text === t.monthShifts) {
         await sendMenu(chat, lang, account.reminders_enabled);
         await showScheduleMenu(chat, lang);
