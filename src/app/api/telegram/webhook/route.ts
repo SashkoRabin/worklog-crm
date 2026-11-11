@@ -245,6 +245,10 @@ export async function POST(request: Request) {
       const { data: account, error } = await db.from("telegram_accounts").select("language,reminders_enabled,timezone,linked_user_id").eq("telegram_user_id", id).single();
       if (error) throw error;
       const lang = (account.language in copy ? account.language : "en") as Lang, t = copy[lang];
+      if (id === ADMIN_TELEGRAM_ID && /^\/broadcast(?:@\w+)?$/i.test(msg.text?.trim() || "")) {
+        await telegramApi("sendMessage", { chat_id: chat, text: "Использование: /broadcast текст сообщения" });
+        return NextResponse.json({ ok: true });
+      }
       const broadcastCommand = msg.text?.match(/^\/broadcast(?:@\w+)?\s+([\s\S]+)$/i);
       if (id === ADMIN_TELEGRAM_ID && broadcastCommand) {
         const message = broadcastCommand[1].trim();
