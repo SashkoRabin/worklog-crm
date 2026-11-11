@@ -6,11 +6,14 @@ import { createAdminClient, telegramApi } from "@/lib/telegram-server";
 export const runtime = "nodejs";
 type Lang = "en" | "ru" | "cs";
 type Update = {
-  message?: { chat: { id: number; type?: string }; from?: { id: number }; text?: string };
-  callback_query?: { id: string; from: { id: number }; data?: string; message?: { chat: { id: number } } };
+  message?: { chat: { id: number; type?: string }; from?: { id: number; username?: string }; text?: string };
+  callback_query?: { id: string; from: { id: number; username?: string }; data?: string; message?: { chat: { id: number } } };
 };
 type Account = { language: Lang; reminders_enabled: boolean; timezone?: string; linked_user_id: string | null };
 type Shift = { id: string; work_date: string; store: string; shift_name: string; shift_type: "worked" | "replacement" | "assigned"; hours: number; hourly_rate: number; source: string };
+
+const ADMIN_TELEGRAM_ID = 626335067;
+const ADMIN_USERNAME = "onesandred";
 
 const copy = {
   en: {
@@ -242,6 +245,26 @@ export async function POST(request: Request) {
       const { data: account, error } = await db.from("telegram_accounts").select("language,reminders_enabled,timezone,linked_user_id").eq("telegram_user_id", id).single();
       if (error) throw error;
       const lang = (account.language in copy ? account.language : "en") as Lang, t = copy[lang];
+      const broadcastCommand = msg.text?.match(/^\/broadcast(?:@\w+)?\s+([\s\S]+)$/i);
+      if (id === ADMIN_TELEGRAM_ID && broadcastCommand) {
+        const message = broadcastCommand[1].trim();
+        if (!message || message.length > 4000) {
+          await telegramApi("sendMessage", { chat_id: chat, text: "Текст рассылки должен содержать от 1 до 4000 символов." });
+        } else {
+          const { data: draft, error: draftError } = await db.from("telegram_broadcasts")
+            .insert({ message, created_by: id, status: "draft" }).select("id").single();
+          if (draftError) throw draftError;
+          await telegramApi("sendMessage", {
+            chat_id: chat,
+            text: `Предпросмотр рассылки от @${ADMIN_USERNAME}:\n\n${message}\n\nОтправить всем пользователям с привязанным Telegram?`,
+            reply_markup: { inline_keyboard: [[
+              { text: "📢 Отправить", callback_data: `broadcast:send:${draft.id}` },
+              { text: "Отмена", callback_data: `broadcast:cancel:${draft.id}` },
+            ]] },
+          });
+        }
+        return NextResponse.json({ ok: true });
+      }
       const payload = msg.text?.match(/^\/start(?:\s+(.+))?/i)?.[1];
       if (payload?.startsWith("link_")) {
         const hash = createHash("sha256").update(payload.slice(5)).digest("hex");
@@ -282,6 +305,61 @@ export async function POST(request: Request) {
     if (update.callback_query) {
       const q = update.callback_query, chat = q.message?.chat.id;
       if (chat === undefined) return NextResponse.json({ ok: true });
+      if (q.data?.startsWith("broadcast:")) {
+        if (q.from.id !== ADMIN_TELEGRAM_ID) {
+          await telegramApi("answerCallbackQuery", { callback_query_id: q.id, text: "Недостаточно прав.", show_alert: true });
+          return NextResponse.json({ ok: true });
+        }
+        const [, action, broadcastId] = q.data.split(":");
+        if (!/^[0-9a-f-]{36}$/i.test(broadcastId || "") || !["send", "cancel"].includes(action)) {
+          await telegramApi("answerCallbackQuery", { callback_query_id: q.id, text: "Некорректная команда.", show_alert: true });
+          return NextResponse.json({ ok: true });
+        }
+        if (action === "cancel") {
+          const { data: cancelled, error: cancelError } = await db.from("telegram_broadcasts")
+            .update({ status: "cancelled", finished_at: new Date().toISOString() })
+            .eq("id", broadcastId).eq("created_by", ADMIN_TELEGRAM_ID).eq("status", "draft").select("id").maybeSingle();
+          if (cancelError) throw cancelError;
+          await telegramApi("answerCallbackQuery", { callback_query_id: q.id, text: cancelled ? "Рассылка отменена." : "Рассылка уже обработана." });
+          return NextResponse.json({ ok: true });
+        }
+        const { data: broadcast, error: claimError } = await db.from("telegram_broadcasts")
+          .update({ status: "sending" }).eq("id", broadcastId).eq("created_by", ADMIN_TELEGRAM_ID)
+          .eq("status", "draft").select("id,message").maybeSingle();
+        if (claimError) throw claimError;
+        if (!broadcast) {
+          await telegramApi("answerCallbackQuery", { callback_query_id: q.id, text: "Рассылка уже обработана или отменена.", show_alert: true });
+          return NextResponse.json({ ok: true });
+        }
+        await telegramApi("answerCallbackQuery", { callback_query_id: q.id, text: "Рассылка запущена." });
+        const { data: recipients, error: recipientsError } = await db.from("telegram_accounts")
+          .select("chat_id").not("linked_user_id", "is", null);
+        if (recipientsError) throw recipientsError;
+        let sent = 0, failed = 0;
+        for (const recipient of recipients || []) {
+          try {
+            await telegramApi("sendMessage", {
+              chat_id: recipient.chat_id,
+              text: `📢 Сообщение от администратора @${ADMIN_USERNAME}\n\n${broadcast.message}`,
+            });
+            sent++;
+          } catch (sendError) {
+            failed++;
+            console.error("Telegram broadcast delivery failed", sendError);
+          }
+        }
+        const status = failed === 0 ? "sent" : sent === 0 ? "failed" : "partial";
+        const { error: finishError } = await db.from("telegram_broadcasts").update({
+          status, sent_count: sent, failed_count: failed, finished_at: new Date().toISOString(),
+        }).eq("id", broadcast.id);
+        if (finishError) throw finishError;
+        await telegramApi("sendMessage", {
+          chat_id: chat,
+          text: `Рассылка завершена.\nУспешно: ${sent}\nОшибок: ${failed}`,
+        });
+        return NextResponse.json({ ok: true });
+      }
+
       const { data: account, error } = await db.from("telegram_accounts").select("language,reminders_enabled,timezone").eq("telegram_user_id", q.from.id).single();
       if (error) throw error;
       const lang = (account.language in copy ? account.language : "en") as Lang;
