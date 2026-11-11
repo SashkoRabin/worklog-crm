@@ -116,6 +116,38 @@ function formatDate(date: string, lang: Lang) {
 function money(value: number, lang: Lang) {
   return new Intl.NumberFormat(lang === "ru" ? "ru-RU" : "cs-CZ", { style: "currency", currency: "CZK", maximumFractionDigits: 0 }).format(value);
 }
+
+const STAFF_LOCATIONS = ["Karlovy Lázně", "Revoluční", "Národní", "Opletalova", "Kaprova", "Karlák", "Karlova", "Karlín"];
+type StaffShift = { work_date: string; location: string; start_time: string; end_time: string; user_ids: string[] };
+function staffToday() {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Prague", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date()).map(x => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}`;
+}
+async function showStaffLocations(chat: number) {
+  const rows: { text: string; callback_data: string }[][] = [];
+  STAFF_LOCATIONS.forEach((name, i) => { const row = Math.floor(i / 2); rows[row] ||= []; rows[row].push({ text: name, callback_data: `staff:loc:${i}` }); });
+  await telegramApi("sendMessage", { chat_id: chat, text: "📍 <b>Выбери локацию</b>", parse_mode: "HTML", reply_markup: { inline_keyboard: rows } });
+}
+async function showStaffDates(chat: number, index: number) {
+  const location = STAFF_LOCATIONS[index]; if (!location) return;
+  await telegramApi("sendMessage", { chat_id: chat, text: `📍 <b>${escapeHtml(location)}</b>\nВыбери дату:`, parse_mode: "HTML", reply_markup: { inline_keyboard: [[{ text: "Вчера", callback_data: `staff:date:${index}:y` }, { text: "Сегодня", callback_data: `staff:date:${index}:t` }, { text: "Завтра", callback_data: `staff:date:${index}:n` }]] } });
+}
+async function showStaffForDate(chat: number, index: number, mode: string) {
+  const location = STAFF_LOCATIONS[index]; if (!location) return;
+  const today = staffToday(), date = mode === "y" ? addDays(today, -1) : mode === "n" ? addDays(today, 1) : today;
+  const db = createAdminClient();
+  const { data, error } = await db.from("connecteam_staff_shifts").select("work_date,location,start_time,end_time,user_ids").eq("work_date", date).eq("location", location).order("start_time", { ascending: true });
+  if (error) throw error;
+  const shifts = (data || []) as StaffShift[], ids = [...new Set(shifts.flatMap(s => s.user_ids || []))];
+  const { data: users, error: usersError } = await db.from("connecteam_staff_users").select("connecteam_user_id,first_name,last_name").in("connecteam_user_id", ids.length ? ids : ["__none__"]);
+  if (usersError) throw usersError;
+  const names = new Map((users || []).map(u => [String(u.connecteam_user_id), `${u.first_name} ${u.last_name}`.trim()]));
+  const lines = [`📍 <b>${escapeHtml(location)}</b>`, `📅 ${formatDate(date, "ru")}`, ""];
+  for (const shift of shifts) for (const id of shift.user_ids || []) { const name = names.get(String(id)); if (name) lines.push(`👤 ${escapeHtml(name)}\n🕒 ${escapeHtml(shift.start_time)} – ${escapeHtml(shift.end_time)}`, ""); }
+  if (!shifts.length) lines.push("На эту дату смен не найдено."); else lines.push(`Всего: ${ids.length} сотрудников`);
+  await telegramApi("sendMessage", { chat_id: chat, text: lines.join("\n"), parse_mode: "HTML" });
+}
+
 async function showSchedule(chatId: number, linkedUserId: string, lang: Lang, timezone: string) {
   const db = createAdminClient(), t = copy[lang], zone = timezone || "Europe/Prague";
   const today = datePartsInZone(new Date(), zone);
@@ -309,6 +341,9 @@ export async function POST(request: Request) {
       } else if (msg.text === t.earnings) {
         if (!account.linked_user_id) await telegramApi("sendMessage", { chat_id: chat, text: lang === "ru" ? "Сначала привяжите Telegram к аккаунту WorkLog на сайте → Telegram." : "Connect your Telegram account to WorkLog first." });
         else await showEarnings(chat, account.linked_user_id, lang, account.timezone || "Europe/Prague");
+      } else if (msg.text === "/staff" || msg.text === "👥 Сотрудники") {
+        if (id !== ADMIN_TELEGRAM_ID) await telegramApi("sendMessage", { chat_id: chat, text: "Эта команда доступна только администратору." });
+        else await showStaffLocations(chat);
       } else if (msg.text === t.remindersOn || msg.text === t.remindersOff) {
         await toggleReminders(chat, id, account);
       }
@@ -374,7 +409,12 @@ export async function POST(request: Request) {
       const { data: account, error } = await db.from("telegram_accounts").select("language,reminders_enabled,timezone").eq("telegram_user_id", q.from.id).single();
       if (error) throw error;
       const lang = (account.language in copy ? account.language : "en") as Lang;
-      if (q.data?.startsWith("lang:")) {
+      if (q.data?.startsWith("staff:")) {
+        if (q.from.id !== ADMIN_TELEGRAM_ID) { await telegramApi("answerCallbackQuery", { callback_query_id: q.id, text: "Недостаточно прав.", show_alert: true }); return NextResponse.json({ ok: true }); }
+        const parts = q.data.split(":"); await telegramApi("answerCallbackQuery", { callback_query_id: q.id });
+        if (parts[1] === "loc") await showStaffDates(chat, Number(parts[2]));
+        else if (parts[1] === "date") await showStaffForDate(chat, Number(parts[2]), parts[3]);
+      } else if (q.data?.startsWith("lang:")) {
         const value = q.data.slice(5) as Lang;
         if (value in copy) {
           const { error: languageError } = await db.from("telegram_accounts").update({ language: value }).eq("telegram_user_id", q.from.id);
