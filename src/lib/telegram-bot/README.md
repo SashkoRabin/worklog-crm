@@ -10,7 +10,7 @@ The Telegram bot is an isolated application layer inside the Next.js repository.
 - `src/lib/telegram-bot/menu.ts`: reply keyboard and main-menu delivery.
 - `src/lib/telegram-bot/utils.ts`: pure formatting/date/escaping helpers.
 - `src/lib/telegram-bot/features/`: feature-specific bot workflows.
-  - `staff.ts`: Connecteam staff browser and its inline navigation.
+  - `staff.ts`: staff hub, location schedule, employee selector and weekly employee schedule.\n  - `staff-leaderboard.ts`: monthly employee hours leaderboard.
   - `dashboard.ts`: personal schedule, monthly shifts, earnings, guide and reminders.
 
 ## Rules for future changes
