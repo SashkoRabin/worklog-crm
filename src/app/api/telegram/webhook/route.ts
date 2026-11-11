@@ -9,7 +9,7 @@ type Update = {
   message?: { chat: { id: number; type?: string }; from?: { id: number }; text?: string };
   callback_query?: { id: string; from: { id: number }; data?: string; message?: { chat: { id: number } } };
 };
-type Account = { language: Lang; reminders_enabled: boolean; timezone?: string };
+type Account = { language: Lang; reminders_enabled: boolean; timezone?: string; linked_user_id: string | null };
 type Shift = { id: string; work_date: string; store: string; shift_name: string; shift_type: "worked" | "replacement" | "assigned"; hours: number; hourly_rate: number; source: string };
 
 const copy = {
@@ -113,14 +113,14 @@ function formatDate(date: string, lang: Lang) {
 function money(value: number, lang: Lang) {
   return new Intl.NumberFormat(lang === "ru" ? "ru-RU" : "cs-CZ", { style: "currency", currency: "CZK", maximumFractionDigits: 0 }).format(value);
 }
-async function showSchedule(chatId: number, userId: number, lang: Lang, timezone: string) {
+async function showSchedule(chatId: number, linkedUserId: string, lang: Lang, timezone: string) {
   const db = createAdminClient(), t = copy[lang], zone = timezone || "Europe/Prague";
   const today = datePartsInZone(new Date(), zone);
   const todayString = `${today.year}-${today.month}-${today.day}`;
   const weekday = new Date(`${todayString}T12:00:00Z`).getUTCDay();
   const monday = addDays(todayString, weekday === 0 ? -6 : 1 - weekday);
   const sunday = addDays(monday, 6);
-  const { data, error } = await db.from("shifts").select("id,work_date,store,shift_name,shift_type,hours,hourly_rate,source").eq("user_id", (await db.from("telegram_accounts").select("linked_user_id").eq("telegram_user_id", userId).single()).data?.linked_user_id || "").gte("work_date", monday).lte("work_date", sunday).order("work_date", { ascending: true });
+  const { data, error } = await db.from("shifts").select("id,work_date,store,shift_name,shift_type,hours,hourly_rate,source").eq("user_id", linkedUserId).gte("work_date", monday).lte("work_date", sunday).order("work_date", { ascending: true });
   if (error) throw error;
   const shifts = (data || []) as Shift[];
   if (!shifts.length) {
@@ -154,15 +154,13 @@ async function showSchedule(chatId: number, userId: number, lang: Lang, timezone
   }
   await telegramApi("sendMessage", { chat_id: chatId, text: lines.join("\n").trim(), parse_mode: "HTML" });
 }
-async function showMonthShifts(chatId: number, userId: number, lang: Lang, timezone: string) {
+async function showMonthShifts(chatId: number, linkedUserId: string, lang: Lang, timezone: string) {
   const db = createAdminClient(), t = copy[lang], zone = timezone || "Europe/Prague";
-  const { data: accountData, error: accountError } = await db.from("telegram_accounts").select("linked_user_id").eq("telegram_user_id", userId).single();
-  if (accountError || !accountData?.linked_user_id) throw accountError || new Error("Telegram account is not linked to a WorkLog user.");
   const today = datePartsInZone(new Date(), zone);
   const monthStart = `${today.year}-${today.month}-01`;
   const nextMonth = addDays(`${today.year}-${today.month}-01`, 32).slice(0, 7) + "-01";
   const monthEnd = addDays(nextMonth, -1);
-  const { data, error } = await db.from("shifts").select("id,work_date,store,shift_name,shift_type,hours,hourly_rate,source").eq("user_id", accountData.linked_user_id).gte("work_date", monthStart).lte("work_date", monthEnd).order("work_date", { ascending: true });
+  const { data, error } = await db.from("shifts").select("id,work_date,store,shift_name,shift_type,hours,hourly_rate,source").eq("user_id", linkedUserId).gte("work_date", monthStart).lte("work_date", monthEnd).order("work_date", { ascending: true });
   if (error) throw error;
   const shifts = (data || []) as Shift[];
   if (!shifts.length) { await telegramApi("sendMessage", { chat_id: chatId, text: t.monthNoShifts, parse_mode: "HTML" }); return; }
@@ -188,16 +186,14 @@ async function showMonthShifts(chatId: number, userId: number, lang: Lang, timez
   }
   if (message.trim()) await telegramApi("sendMessage", { chat_id: chatId, text: message.trim(), parse_mode: "HTML" });
 }
-async function showEarnings(chatId: number, userId: number, lang: Lang, timezone: string) {
+async function showEarnings(chatId: number, linkedUserId: string, lang: Lang, timezone: string) {
   const db = createAdminClient(), zone = timezone || "Europe/Prague", t = copy[lang];
-  const { data: accountData, error: accountError } = await db.from("telegram_accounts").select("linked_user_id").eq("telegram_user_id", userId).single();
-  if (accountError || !accountData?.linked_user_id) throw accountError || new Error("Telegram account is not linked to a WorkLog user.");
   const today = datePartsInZone(new Date(), zone);
   const todayString = `${today.year}-${today.month}-${today.day}`;
   const monthStart = `${today.year}-${today.month}-01`;
   const nextMonth = addDays(`${today.year}-${today.month}-01`, 32).slice(0, 7) + "-01";
   const monthEnd = addDays(nextMonth, -1);
-  const { data, error } = await db.from("shifts").select("work_date,hours,hourly_rate").eq("user_id", accountData.linked_user_id).gte("work_date", monthStart).lte("work_date", monthEnd);
+  const { data, error } = await db.from("shifts").select("work_date,hours,hourly_rate").eq("user_id", linkedUserId).gte("work_date", monthStart).lte("work_date", monthEnd);
   if (error) throw error;
   const shifts = (data || []) as Pick<Shift, "work_date" | "hours" | "hourly_rate">[];
   const actual = shifts.filter(s => s.work_date <= todayString);
@@ -243,7 +239,7 @@ export async function POST(request: Request) {
     if (msg?.from && msg.chat.type !== "group" && msg.chat.type !== "supergroup") {
       const id = msg.from.id, chat = msg.chat.id;
       await db.from("telegram_accounts").upsert({ telegram_user_id: id, chat_id: chat }, { onConflict: "telegram_user_id", ignoreDuplicates: true });
-      const { data: account, error } = await db.from("telegram_accounts").select("language,reminders_enabled,timezone").eq("telegram_user_id", id).single();
+      const { data: account, error } = await db.from("telegram_accounts").select("language,reminders_enabled,timezone,linked_user_id").eq("telegram_user_id", id).single();
       if (error) throw error;
       const lang = (account.language in copy ? account.language : "en") as Lang, t = copy[lang];
       const payload = msg.text?.match(/^\/start(?:\s+(.+))?/i)?.[1];
@@ -271,17 +267,14 @@ export async function POST(request: Request) {
       } else if (msg.text === t.guideMenu) {
         await showGuide(chat, lang);
       } else if (msg.text === t.schedule) {
-        const { data: linked } = await db.from("telegram_accounts").select("linked_user_id").eq("telegram_user_id", id).single();
-        if (!linked?.linked_user_id) await telegramApi("sendMessage", { chat_id: chat, text: lang === "ru" ? "Сначала привяжите Telegram к аккаунту WorkLog на сайте → Telegram." : "Connect your Telegram account to WorkLog first." });
-        else await showSchedule(chat, id, lang, account.timezone || "Europe/Prague");
+        if (!account.linked_user_id) await telegramApi("sendMessage", { chat_id: chat, text: lang === "ru" ? "Сначала привяжите Telegram к аккаунту WorkLog на сайте → Telegram." : "Connect your Telegram account to WorkLog first." });
+        else await showSchedule(chat, account.linked_user_id, lang, account.timezone || "Europe/Prague");
       } else if (msg.text === t.monthShifts) {
-        const { data: linked } = await db.from("telegram_accounts").select("linked_user_id").eq("telegram_user_id", id).single();
-        if (!linked?.linked_user_id) await telegramApi("sendMessage", { chat_id: chat, text: lang === "ru" ? "Сначала привяжите Telegram к аккаунту WorkLog на сайте → Telegram." : "Connect your Telegram account to WorkLog first." });
-        else await showMonthShifts(chat, id, lang, account.timezone || "Europe/Prague");
+        if (!account.linked_user_id) await telegramApi("sendMessage", { chat_id: chat, text: lang === "ru" ? "Сначала привяжите Telegram к аккаунту WorkLog на сайте → Telegram." : "Connect your Telegram account to WorkLog first." });
+        else await showMonthShifts(chat, account.linked_user_id, lang, account.timezone || "Europe/Prague");
       } else if (msg.text === t.earnings) {
-        const { data: linked } = await db.from("telegram_accounts").select("linked_user_id").eq("telegram_user_id", id).single();
-        if (!linked?.linked_user_id) await telegramApi("sendMessage", { chat_id: chat, text: lang === "ru" ? "Сначала привяжите Telegram к аккаунту WorkLog на сайте → Telegram." : "Connect your Telegram account to WorkLog first." });
-        else await showEarnings(chat, id, lang, account.timezone || "Europe/Prague");
+        if (!account.linked_user_id) await telegramApi("sendMessage", { chat_id: chat, text: lang === "ru" ? "Сначала привяжите Telegram к аккаунту WorkLog на сайте → Telegram." : "Connect your Telegram account to WorkLog first." });
+        else await showEarnings(chat, account.linked_user_id, lang, account.timezone || "Europe/Prague");
       } else if (msg.text === t.remindersOn || msg.text === t.remindersOff) {
         await toggleReminders(chat, id, account);
       }
