@@ -6,6 +6,7 @@ import { escapeHtml } from "./utils";
 import { menuKeyboard, sendMenu } from "./menu";
 import { showStaffLocations, showStaffDates, showStaffForDate } from "./features/staff";
 import { showSchedule, showMonthShifts, showEarnings, showGuide, toggleReminders } from "./features/dashboard";
+import { showStaffLeaderboard } from "./features/staff-leaderboard";
 
 function matchSecret(received: string | null, expected: string) {
   if (!received) return false;
@@ -89,6 +90,9 @@ export async function handleTelegramWebhook(request: Request) {
       } else if (msg.text === t.earnings) {
         if (!account.linked_user_id) await telegramApi("sendMessage", { chat_id: chat, text: lang === "ru" ? "Сначала привяжите Telegram к аккаунту WorkLog на сайте → Telegram." : "Connect your Telegram account to WorkLog first." });
         else await showEarnings(chat, account.linked_user_id, lang, account.timezone || "Europe/Prague");
+      } else if (msg.text === "🏆 Топ сотрудников") {
+        if (id !== ADMIN_TELEGRAM_ID) await telegramApi("sendMessage", { chat_id: chat, text: "Эта команда доступна только администратору." });
+        else await showStaffLeaderboard(chat);
       } else if (msg.text === "/staff" || msg.text === "👥 Сотрудники") {
         if (id !== ADMIN_TELEGRAM_ID) await telegramApi("sendMessage", { chat_id: chat, text: "Эта команда доступна только администратору." });
         else await showStaffLocations(chat);
