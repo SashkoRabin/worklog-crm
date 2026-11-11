@@ -85,7 +85,8 @@ export async function showStaffScheduleShifts(chat: number, mode: ScheduleMode, 
   const monday = addDays(today, -((weekday + 6) % 7));
   const monthStart = `${today.slice(0, 7)}-01`;
   const from = mode === "month" ? monthStart : mode === "week" ? monday : today;
-  const monthEnd = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)), 0)).toISOString().slice(0, 10);\n  const to = mode === "month" ? monthEnd : mode === "week" ? addDays(monday, 6) : addDays(today, 7);
+  const monthEnd = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)), 0)).toISOString().slice(0, 10);
+  const to = mode === "month" ? monthEnd : mode === "week" ? addDays(monday, 6) : addDays(today, 7);
   const location = locationIndex === "all" ? null : STAFF_LOCATIONS[locationIndex];
   if (locationIndex !== "all" && !location) return;
 
@@ -96,7 +97,7 @@ export async function showStaffScheduleShifts(chat: number, mode: ScheduleMode, 
     .order("work_date", { ascending: true }).order("start_time", { ascending: true });
   if (error) throw error;
 
-  const normalize = (value: string) => value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLocaleLowerCase("en").replace(/[^a-z0-9]+/g, " ").trim();
+  const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("en").replace(/[^a-z0-9]+/g, " ").trim();
   const target = location ? normalize(location) : null;
   let shifts = ((data || []) as StaffShift[]).filter(shift => {
     if (!target) return true;
@@ -132,7 +133,7 @@ export async function showStaffScheduleShifts(chat: number, mode: ScheduleMode, 
   if (!count) lines.push(mode === "upcoming" ? "🎉 Предстоящих смен не найдено." : "Смен за выбранный период не найдено.");
   else lines.push("━━━━━━━━━━━━━━━━━━", `Всего смен: <b>${count}</b>`);
 
-  await renderStaff(chat, messageId, lines.join("\\n"), [
+  await renderStaff(chat, messageId, lines.join("\n"), [
     [{ text: "🔄 Выбрать другую локацию", callback_data: `staff:shifts:${mode}` }],
     [{ text: "⬅️ К расписанию", callback_data: "staff:schedule" }, { text: "🏠 В меню", callback_data: "staff:menu" }],
   ]);
