@@ -21,7 +21,7 @@ function getLocalFridayKey(date: Date, timezone: string) {
     hourCycle: "h23",
   }).formatToParts(date);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  if (values.weekday !== "Fri" || values.hour !== "18" || values.minute !== "00") return null;
+  if (values.weekday !== "Fri" || values.hour !== "18") return null;
   return `${values.year}-${values.month}-${values.day}`;
 }
 
