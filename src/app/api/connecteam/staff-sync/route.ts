@@ -25,6 +25,15 @@ type ConnecteamUser = {
 };
 type ApiResult<T> = { code?: number; data?: T; message?: string };
 
+function repairMojibake(value: string) {
+  // Some Connecteam responses arrive as UTF-8 bytes decoded as Latin-1.
+  // Repair only strings that show typical mojibake markers and only when
+  // the byte round-trip produces valid UTF-8.
+  if (!/[ÃÂÐÑâ€]/.test(value)) return value;
+  const repaired = Buffer.from(value, "latin1").toString("utf8");
+  return repaired.includes("\uFFFD") ? value : repaired;
+}
+
 function localDate(epoch: number) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Prague", year: "numeric", month: "2-digit", day: "2-digit",
@@ -145,8 +154,8 @@ export async function GET(request: Request) {
     const syncedAt = new Date().toISOString();
     const userRows = users.filter((user) => user.userid != null).map((user) => ({
       connecteam_user_id: String(user.userid),
-      first_name: user.firstname || "",
-      last_name: user.lastname || "",
+      first_name: repairMojibake(user.firstname || ""),
+      last_name: repairMojibake(user.lastname || ""),
       is_archived: Boolean(user.isArchived),
       synced_at: syncedAt,
     }));
@@ -160,7 +169,7 @@ export async function GET(request: Request) {
     ).map((shift) => ({
       connecteam_shift_id: String(shift.id),
       work_date: localDate(shift.startTime),
-      location: shift.title!.trim(),
+      location: repairMojibake(shift.title!.trim()),
       start_time: localTime(shift.startTime, shift.timezone),
       end_time: localTime(shift.endTime, shift.timezone),
       start_epoch: shift.startTime,
