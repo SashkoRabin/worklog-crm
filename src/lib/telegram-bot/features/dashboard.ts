@@ -72,7 +72,7 @@ export async function showUpcomingShifts(chatId: number, linkedUserId: string, l
   lines.push("━━━━━━━━━━━━━━━━━━");
   await telegramApi("sendMessage", { chat_id: chatId, text: lines.join("\n"), parse_mode: "HTML" });
 }
-\nexport async function showSchedule(chatId: number, linkedUserId: string, lang: Lang, timezone: string) {
+export async function showSchedule(chatId: number, linkedUserId: string, lang: Lang, timezone: string) {
   const db = createAdminClient(), t = copy[lang], zone = timezone || "Europe/Prague";
   const today = datePartsInZone(new Date(), zone);
   const todayString = `${today.year}-${today.month}-${today.day}`;
