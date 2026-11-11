@@ -9,8 +9,8 @@ export function menuKeyboard(lang: Lang, enabled: boolean) {
   return {
     keyboard: [
       [{ text: t.open, web_app: { url: appUrl() } }],
-      [{ text: t.guideMenu }, { text: t.schedule }],
-      [{ text: t.monthShifts }, { text: t.earnings }],
+      [{ text: t.guideMenu }, { text: t.scheduleMenu }],
+      [{ text: t.earnings }],
       [{ text: "👥 Сотрудники" }],
       [{ text: enabled ? t.remindersOn : t.remindersOff }],
     ],
