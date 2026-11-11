@@ -311,7 +311,7 @@ export async function POST(request: Request) {
           return NextResponse.json({ ok: true });
         }
         const [, action, broadcastId] = q.data.split(":");
-        if (!/^[0-9a-f-]{36}$/i.test(broadcastId || "") || !["send", "cancel"].includes(action)) {
+        if (!/^[0-9a-f-]{36}$/i.test(broadcastId || "") || action !== "send" && action !== "cancel") {
           await telegramApi("answerCallbackQuery", { callback_query_id: q.id, text: "Некорректная команда.", show_alert: true });
           return NextResponse.json({ ok: true });
         }
