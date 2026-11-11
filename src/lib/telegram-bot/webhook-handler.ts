@@ -4,7 +4,7 @@ import { createAdminClient, telegramApi } from "@/lib/telegram-server";
 import { ADMIN_TELEGRAM_ID, ADMIN_USERNAME, copy, getLanguage, type Lang, type Update } from "./config";
 import { escapeHtml } from "./utils";
 import { menuKeyboard, sendMenu } from "./menu";
-import { showStaffHome, showStaffLocations, showStaffDates, showStaffForDate, showStaffEmployees, showStaffEmployeeWeek } from "./features/staff";
+import { showStaffHome, showStaffScheduleHome, showStaffScheduleLocations, showStaffScheduleShifts, showStaffEmployees, showStaffEmployeeWeek } from "./features/staff";
 import { showSchedule, showMonthShifts, showEarnings, showGuide, toggleReminders } from "./features/dashboard";
 import { showStaffLeaderboard } from "./features/staff-leaderboard";
 
@@ -169,15 +169,16 @@ export async function handleTelegramWebhook(request: Request) {
           console.warn("Telegram callback acknowledgement failed", callbackError);
         }
         if (parts[1] === "home") await showStaffHome(chat, q.message?.message_id);
-        else if (parts[1] === "locations") await showStaffLocations(chat, q.message?.message_id);
+        else if (parts[1] === "schedule") await showStaffScheduleHome(chat, q.message?.message_id);
+        else if (parts[1] === "shifts" && ["upcoming", "month", "week"].includes(parts[2])) await showStaffScheduleLocations(chat, parts[2] as "upcoming" | "month" | "week", q.message?.message_id);
+        else if (parts[1] === "shiftloc" && ["upcoming", "month", "week"].includes(parts[2])) {
+          const locationIndex = parts[3] === "all" ? "all" : Number(parts[3]);
+          await showStaffScheduleShifts(chat, parts[2] as "upcoming" | "month" | "week", locationIndex, q.message?.message_id);
+        }
         else if (parts[1] === "leaderboard") await showStaffLeaderboard(chat, q.message?.message_id);
         else if (parts[1] === "employees") await showStaffEmployees(chat, Number(parts[2] || 0), q.message?.message_id);
         else if (parts[1] === "person") await showStaffEmployeeWeek(chat, parts[2] || "", Number(parts[3] || 0), q.message?.message_id);
         else if (parts[1] === "noop") { /* Pagination indicator only. */ }
-        else if (parts[1] === "loc") await showStaffDates(chat, Number(parts[2]), q.message?.message_id);
-        else if (parts[1] === "date") await showStaffForDate(chat, Number(parts[2]), parts[3], q.message?.message_id);
-        else if (parts[1] === "back" && parts[2] === "loc") await showStaffLocations(chat, q.message?.message_id);
-        else if (parts[1] === "back" && parts[2] === "dates") await showStaffDates(chat, Number(parts[3]), q.message?.message_id);
         else if (parts[1] === "menu") {
           if (q.message?.message_id) {
             try { await telegramApi("deleteMessage", { chat_id: chat, message_id: q.message.message_id }); }
