@@ -113,7 +113,7 @@ export async function showStaffEmployees(chat: number, page = 0, messageId?: num
   if (error) throw error;
   const employees = (data || []) as StaffUser[];
   const pageCount = Math.max(1, Math.ceil(employees.length / EMPLOYEES_PER_PAGE));
-  const currentPage = Math.min(Math.max(0, page, ), pageCount - 1);
+  const currentPage = Math.min(Math.max(0, page), pageCount - 1);
   const visible = employees.slice(currentPage * EMPLOYEES_PER_PAGE, (currentPage + 1) * EMPLOYEES_PER_PAGE);
   const keyboard: { text: string; callback_data: string }[][] = [];
   for (let i = 0; i < visible.length; i += 2) {
