@@ -1,24 +1,17 @@
-import { createHash, timingSafeEqual } from "crypto";
+import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 import { createAdminClient, telegramApi } from "@/lib/telegram-server";
-import { ADMIN_TELEGRAM_ID, ADMIN_USERNAME, copy, getLanguage, type Account, type Lang, type Update } from "./config";
+import { ADMIN_TELEGRAM_ID, ADMIN_USERNAME, copy, getLanguage, type Update } from "./config";
 import { escapeHtml } from "./utils";
 import { menuKeyboard, sendMenu } from "./menu";
 import { showStaffLocations, showStaffDates, showStaffForDate } from "./features/staff";
 import { showSchedule, showMonthShifts, showEarnings, showGuide, toggleReminders } from "./features/dashboard";
 
-function matchSecret(a: string | null, b: string) { if (!a) return false; const x = Buffer.from(a), y = Buffer.from(b); return x.length === y.length && timingSafeEqual(x, y); }
-
 export async function handleTelegramWebhook(request: Request) {
-  const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
-  if (!secret) return NextResponse.json({ error: "Telegram webhook is not configured." }, { status: 503 });
-  if (!matchSecret(request.headers.get("x-telegram-bot-api-secret-token"), secret)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-export async function POST(request: Request) {
-  const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
-  if (!secret) return NextResponse.json({ error: "Telegram webhook is not configured." }, { status: 503 });
-  if (!matchSecret(request.headers.get("x-telegram-bot-api-secret-token"), secret)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  try {
+    const update = await request.json() as Update;
+    const db = createAdminClient();
+    const msg = update.message;
     const update = await request.json() as Update, db = createAdminClient(), msg = update.message;
     if (msg?.from && msg.chat.type !== "group" && msg.chat.type !== "supergroup") {
       const id = msg.from.id, chat = msg.chat.id;
@@ -168,9 +161,9 @@ export async function POST(request: Request) {
           // prevent handling the action or cause webhook retry storms.
           console.warn("Telegram callback acknowledgement failed", callbackError);
         }
-        if (parts[1] === "loc") await showStaffDates(chat, Number(parts[2]), q.message?.message_id);
+        if (parts[1] === "location") await showStaffDates(chat, Number(parts[2]), q.message?.message_id);
         else if (parts[1] === "date") await showStaffForDate(chat, Number(parts[2]), parts[3], q.message?.message_id);
-        else if (parts[1] === "back" && parts[2] === "loc") await showStaffLocations(chat, q.message?.message_id);
+        else if (parts[1] === "back" && parts[2] === "locations") await showStaffLocations(chat, q.message?.message_id);
         else if (parts[1] === "back" && parts[2] === "dates") await showStaffDates(chat, Number(parts[3]), q.message?.message_id);
         else if (parts[1] === "menu") {
           if (q.message?.message_id) {
@@ -198,11 +191,6 @@ export async function POST(request: Request) {
       }
     }
     return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error("Telegram webhook failed", error);
-    return NextResponse.json({ error: "Unable to process Telegram update." }, { status: 500 });
-  }
-}
   } catch (error) {
     console.error("Telegram webhook failed", error);
     return NextResponse.json({ error: "Unable to process Telegram update." }, { status: 500 });
