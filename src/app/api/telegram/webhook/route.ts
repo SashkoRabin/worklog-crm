@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 type Lang = "en" | "ru" | "cs";
 type Update = {
   message?: { chat: { id: number; type?: string }; from?: { id: number; username?: string }; text?: string };
-  callback_query?: { id: string; from: { id: number; username?: string }; data?: string; message?: { chat: { id: number } } };
+  callback_query?: { id: string; from: { id: number; username?: string }; data?: string; message?: { message_id: number; chat: { id: number } } };
 };
 type Account = { language: Lang; reminders_enabled: boolean; timezone?: string; linked_user_id: string | null };
 type Shift = { id: string; work_date: string; store: string; shift_name: string; shift_type: "worked" | "replacement" | "assigned"; hours: number; hourly_rate: number; source: string };
@@ -124,60 +124,73 @@ function staffToday() {
   const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Prague", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date()).map(x => [x.type, x.value]));
   return `${p.year}-${p.month}-${p.day}`;
 }
-async function showStaffLocations(chat: number) {
+function staffNav(index?: number, backTo: "loc" | "dates" = "loc") {
+  return [{ text: "⬅️ Назад", callback_data: backTo === "loc" ? "staff:back:loc" : `staff:back:dates:${index}` }, { text: "🏠 В меню", callback_data: "staff:menu" }];
+}
+async function renderStaff(chat: number, messageId: number | undefined, text: string, keyboard: { text: string; callback_data: string }[][]) {
+  const payload = { chat_id: chat, text, parse_mode: "HTML", reply_markup: { inline_keyboard: keyboard } };
+  if (messageId) {
+    try {
+      await telegramApi("editMessageText", { ...payload, message_id: messageId });
+      return;
+    } catch (error) {
+      console.warn("Could not edit staff flow message, sending replacement", error);
+    }
+  }
+  await telegramApi("sendMessage", payload);
+}
+async function showStaffLocations(chat: number, messageId?: number) {
   const rows: { text: string; callback_data: string }[][] = [];
   STAFF_LOCATIONS.forEach((name, i) => { const row = Math.floor(i / 2); rows[row] ||= []; rows[row].push({ text: name, callback_data: `staff:loc:${i}` }); });
-  await telegramApi("sendMessage", { chat_id: chat, text: "📍 <b>Выбери локацию</b>", parse_mode: "HTML", reply_markup: { inline_keyboard: rows } });
+  await renderStaff(chat, messageId, "👥 <b>Сотрудники</b>\n\n📍 Выбери локацию, чтобы посмотреть расписание команды.", [...rows, [{ text: "🏠 В меню", callback_data: "staff:menu" }]]);
 }
-async function showStaffDates(chat: number, index: number) {
+async function showStaffDates(chat: number, index: number, messageId?: number) {
   const location = STAFF_LOCATIONS[index]; if (!location) return;
-  await telegramApi("sendMessage", { chat_id: chat, text: `📍 <b>${escapeHtml(location)}</b>\nВыбери дату:`, parse_mode: "HTML", reply_markup: { inline_keyboard: [[{ text: "Вчера", callback_data: `staff:date:${index}:y` }, { text: "Сегодня", callback_data: `staff:date:${index}:t` }, { text: "Завтра", callback_data: `staff:date:${index}:n` }]] } });
+  await renderStaff(chat, messageId, `📍 <b>${escapeHtml(location)}</b>\n\nНа какую дату показать смены?`, [
+    [{ text: "Вчера", callback_data: `staff:date:${index}:y` }, { text: "Сегодня", callback_data: `staff:date:${index}:t` }, { text: "Завтра", callback_data: `staff:date:${index}:n` }],
+    staffNav(index, "loc"),
+  ]);
 }
-async function showStaffForDate(chat: number, index: number, mode: string) {
+async function showStaffForDate(chat: number, index: number, mode: string, messageId?: number) {
   const location = STAFF_LOCATIONS[index]; if (!location) return;
   const today = staffToday(), date = mode === "y" ? addDays(today, -1) : mode === "n" ? addDays(today, 1) : today;
   const db = createAdminClient();
-  // Fetch the whole date first: Connecteam shift titles are not always an exact
-  // match for the short location labels shown in Telegram (suffixes/prefixes,
-  // punctuation and diacritics can differ).
   const { data, error } = await db.from("connecteam_staff_shifts")
     .select("work_date,location,start_time,end_time,user_ids")
     .eq("work_date", date)
     .order("start_time", { ascending: true });
   if (error) throw error;
-  const normalizeLocation = (value: string) => value
-    .normalize("NFD")
-    .replace(/[\\u0300-\\u036f]/g, "")
-    .toLocaleLowerCase("en")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
+  const normalizeLocation = (value: string) => value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLocaleLowerCase("en").replace(/[^a-z0-9]+/g, " ").trim();
   const targetLocation = normalizeLocation(location);
   const allDateShifts = (data || []) as StaffShift[];
   const shifts = allDateShifts.filter(shift => {
     const actual = normalizeLocation(shift.location || "");
-    return actual === targetLocation || actual.startsWith(targetLocation + " ") ||
-      actual.includes(" " + targetLocation + " ") || actual.endsWith(" " + targetLocation);
+    return actual === targetLocation || actual.startsWith(targetLocation + " ") || actual.includes(" " + targetLocation + " ") || actual.endsWith(" " + targetLocation);
   });
-  const ids = [...new Set(shifts.flatMap(s => (s.user_ids || []).map(String)))];
+  const ids = [...new Set(shifts.flatMap(shift => (shift.user_ids || []).map(String)))];
   const { data: users, error: usersError } = await db.from("connecteam_staff_users").select("connecteam_user_id,first_name,last_name").in("connecteam_user_id", ids.length ? ids : ["__none__"]);
   if (usersError) throw usersError;
-  const names = new Map((users || []).map(u => [String(u.connecteam_user_id), `${u.first_name} ${u.last_name}`.trim()]));
+  const names = new Map((users || []).map(user => [String(user.connecteam_user_id), `${user.first_name} ${user.last_name}`.trim()]));
   const lines = [`📍 <b>${escapeHtml(location)}</b>`, `📅 ${formatDate(date, "ru")}`, ""];
-  for (const shift of shifts) for (const id of shift.user_ids || []) { const name = names.get(String(id)); if (name) lines.push(`👤 ${escapeHtml(name)}\n🕒 ${escapeHtml(shift.start_time)} – ${escapeHtml(shift.end_time)}`, ""); }
-  if (!shifts.length) {
-    const availableLocations = [...new Set(allDateShifts.map(s => s.location).filter(Boolean))];
-    lines.push("На эту дату смен не найдено.");
-    if (availableLocations.length) {
-      lines.push("", "<i>Локации в синхронизации:</i>", ...availableLocations.slice(0, 12).map(value => "• " + escapeHtml(value)));
-    } else {
-      lines.push("", "<i>В базе нет смен за эту дату. Проверь последнюю синхронизацию Connecteam.</i>");
-    }
-  } else {
-    lines.push(`Всего: ${ids.length} сотрудников`);
+  const seen = new Set<string>();
+  for (const shift of shifts) for (const id of shift.user_ids || []) {
+    const key = `${id}:${shift.start_time}:${shift.end_time}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const name = names.get(String(id));
+    if (name) lines.push(`👤 <b>${escapeHtml(name)}</b>\n🕒 ${escapeHtml(shift.start_time)} – ${escapeHtml(shift.end_time)}`, "");
   }
-  await telegramApi("sendMessage", { chat_id: chat, text: lines.join("\n"), parse_mode: "HTML" });
+  if (!shifts.length) {
+    const availableLocations = [...new Set(allDateShifts.map(shift => shift.location).filter(Boolean))];
+    lines.push("На эту дату смен не найдено.");
+    if (availableLocations.length) lines.push("", "<i>Локации в синхронизации:</i>", ...availableLocations.slice(0, 8).map(value => "• " + escapeHtml(value)));
+    else lines.push("", "<i>В базе нет смен за эту дату. Проверь синхронизацию Connecteam.</i>");
+  } else {
+    lines.push(`👥 Всего сотрудников: <b>${ids.length}</b>`);
+  }
+  const keyboard = [[{ text: "🔄 Другая дата", callback_data: `staff:back:dates:${index}` }], staffNav(index, "loc")];
+  await renderStaff(chat, messageId, lines.join("\n"), keyboard);
 }
-
 async function showSchedule(chatId: number, linkedUserId: string, lang: Lang, timezone: string) {
   const db = createAdminClient(), t = copy[lang], zone = timezone || "Europe/Prague";
   const today = datePartsInZone(new Date(), zone);
@@ -449,8 +462,13 @@ export async function POST(request: Request) {
           // prevent handling the action or cause webhook retry storms.
           console.warn("Telegram callback acknowledgement failed", callbackError);
         }
-        if (parts[1] === "loc") await showStaffDates(chat, Number(parts[2]));
-        else if (parts[1] === "date") await showStaffForDate(chat, Number(parts[2]), parts[3]);
+        if (parts[1] === "loc") await showStaffDates(chat, Number(parts[2]), q.message?.message_id);
+        else if (parts[1] === "date") await showStaffForDate(chat, Number(parts[2]), parts[3], q.message?.message_id);
+        else if (parts[1] === "back" && parts[2] === "loc") await showStaffLocations(chat, q.message?.message_id);
+        else if (parts[1] === "back" && parts[2] === "dates") await showStaffDates(chat, Number(parts[3]), q.message?.message_id);
+        else if (parts[1] === "menu") {
+          await telegramApi("editMessageText", { chat_id: chat, message_id: q.message?.message_id, text: "🏠 <b>Главное меню</b>\\n\\nИспользуй кнопки меню Telegram ниже.", parse_mode: "HTML", reply_markup: { inline_keyboard: [[{ text: "👥 Сотрудники", callback_data: "staff:back:loc" }]] } });
+        }
       } else if (q.data?.startsWith("lang:")) {
         const value = q.data.slice(5) as Lang;
         if (value in copy) {
