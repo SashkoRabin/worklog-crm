@@ -121,13 +121,14 @@ export default function Analytics() {
     if (savedTheme) setTheme(savedTheme);
     document.documentElement.dataset.theme = savedTheme || "light";
     if (!client) return;
-    client.auth.getUser().then(async ({ data }) => {
-      if (!data.user) return;
-      setShifts(await loadUserShifts(data.user.id));
+    client.auth.getSession().then(async ({ data }) => {
+      const user = data.session?.user;
+      if (!user) return;
+      setShifts(await loadUserShifts(user.id));
       // Do not hold analytics behind a remote calendar request. If a linked
       // calendar changes, refresh the already rendered view in the background.
       void syncConnecteamIfConnected().then((result) => {
-        if (result.synced) void loadUserShifts(data.user.id).then(setShifts);
+        if (result.synced) void loadUserShifts(user.id).then(setShifts);
       });
     });
   }, []);
