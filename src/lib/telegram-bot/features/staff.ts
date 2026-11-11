@@ -85,7 +85,7 @@ export async function showStaffScheduleShifts(chat: number, mode: ScheduleMode, 
   const monday = addDays(today, -((weekday + 6) % 7));
   const monthStart = `${today.slice(0, 7)}-01`;
   const from = mode === "month" ? monthStart : mode === "week" ? monday : today;
-  const to = mode === "month" ? addDays(monthStart, 31).slice(0, 7) === today.slice(0, 7) ? addDays(today, 31) : `${today.slice(0, 7)}-31` : mode === "week" ? addDays(monday, 6) : addDays(today, 7);
+  const monthEnd = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)), 0)).toISOString().slice(0, 10);\n  const to = mode === "month" ? monthEnd : mode === "week" ? addDays(monday, 6) : addDays(today, 7);
   const location = locationIndex === "all" ? null : STAFF_LOCATIONS[locationIndex];
   if (locationIndex !== "all" && !location) return;
 
