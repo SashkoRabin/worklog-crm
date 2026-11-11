@@ -124,7 +124,7 @@ export async function showStaffScheduleShifts(chat: number, mode: ScheduleMode, 
     const key = shift.connecteam_shift_id || `${shift.work_date}:${shift.start_time}:${shift.end_time}:${shift.location}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    const assigned = (shift.user_ids || []).map(String).map(id => names.get(id)).filter(Boolean);
+    const assigned = (shift.user_ids || []).map(String).map(id => names.get(id)).filter((name): name is string => Boolean(name));
     lines.push(`<b>${escapeHtml(formatDate(shift.work_date, "ru"))}</b> · ${escapeHtml(shift.start_time)}–${escapeHtml(shift.end_time)}`);
     lines.push(`📍 ${escapeHtml(shift.location || "Локация не указана")}`);
     lines.push(`👥 ${assigned.length ? assigned.map(escapeHtml).join(", ") : "Сотрудники не назначены"}`, "");
