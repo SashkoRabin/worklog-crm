@@ -23,3 +23,7 @@ create table if not exists public.telegram_shift_notifications (
   created_at timestamptz not null default now(),
   sent_at timestamptz
 );
+
+alter table public.telegram_broadcasts enable row level security;
+alter table public.telegram_shift_notifications enable row level security;
+-- No client policies: these tables are accessed only by trusted server routes.
