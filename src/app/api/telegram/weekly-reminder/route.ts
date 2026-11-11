@@ -35,8 +35,7 @@ export async function GET(request: Request) {
   const { data, error } = await db
     .from("telegram_accounts")
     .select("telegram_user_id,chat_id,timezone")
-    .not("linked_user_id", "is", null)
-    .eq("reminders_enabled", true);
+    .not("linked_user_id", "is", null);
 
   if (error) {
     console.error("Weekly Telegram reminder: failed to load accounts", error);
