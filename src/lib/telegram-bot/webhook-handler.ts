@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { createAdminClient, telegramApi } from "@/lib/telegram-server";
-import { ADMIN_TELEGRAM_ID, ADMIN_USERNAME, copy, getLanguage, type Update } from "./config";
+import { ADMIN_TELEGRAM_ID, ADMIN_USERNAME, copy, getLanguage, type Lang, type Update } from "./config";
 import { escapeHtml } from "./utils";
 import { menuKeyboard, sendMenu } from "./menu";
 import { showStaffLocations, showStaffDates, showStaffForDate } from "./features/staff";
