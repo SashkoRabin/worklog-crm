@@ -137,15 +137,44 @@ async function showStaffForDate(chat: number, index: number, mode: string) {
   const location = STAFF_LOCATIONS[index]; if (!location) return;
   const today = staffToday(), date = mode === "y" ? addDays(today, -1) : mode === "n" ? addDays(today, 1) : today;
   const db = createAdminClient();
-  const { data, error } = await db.from("connecteam_staff_shifts").select("work_date,location,start_time,end_time,user_ids").eq("work_date", date).eq("location", location).order("start_time", { ascending: true });
+  // Fetch the whole date first: Connecteam shift titles are not always an exact
+  // match for the short location labels shown in Telegram (suffixes/prefixes,
+  // punctuation and diacritics can differ).
+  const { data, error } = await db.from("connecteam_staff_shifts")
+    .select("work_date,location,start_time,end_time,user_ids")
+    .eq("work_date", date)
+    .order("start_time", { ascending: true });
   if (error) throw error;
-  const shifts = (data || []) as StaffShift[], ids = [...new Set(shifts.flatMap(s => s.user_ids || []))];
+  const normalizeLocation = (value: string) => value
+    .normalize("NFD")
+    .replace(/[\\u0300-\\u036f]/g, "")
+    .toLocaleLowerCase("en")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  const targetLocation = normalizeLocation(location);
+  const allDateShifts = (data || []) as StaffShift[];
+  const shifts = allDateShifts.filter(shift => {
+    const actual = normalizeLocation(shift.location || "");
+    return actual === targetLocation || actual.startsWith(targetLocation + " ") ||
+      actual.includes(" " + targetLocation + " ") || actual.endsWith(" " + targetLocation);
+  });
+  const ids = [...new Set(shifts.flatMap(s => (s.user_ids || []).map(String)))];
   const { data: users, error: usersError } = await db.from("connecteam_staff_users").select("connecteam_user_id,first_name,last_name").in("connecteam_user_id", ids.length ? ids : ["__none__"]);
   if (usersError) throw usersError;
   const names = new Map((users || []).map(u => [String(u.connecteam_user_id), `${u.first_name} ${u.last_name}`.trim()]));
   const lines = [`📍 <b>${escapeHtml(location)}</b>`, `📅 ${formatDate(date, "ru")}`, ""];
   for (const shift of shifts) for (const id of shift.user_ids || []) { const name = names.get(String(id)); if (name) lines.push(`👤 ${escapeHtml(name)}\n🕒 ${escapeHtml(shift.start_time)} – ${escapeHtml(shift.end_time)}`, ""); }
-  if (!shifts.length) lines.push("На эту дату смен не найдено."); else lines.push(`Всего: ${ids.length} сотрудников`);
+  if (!shifts.length) {
+    const availableLocations = [...new Set(allDateShifts.map(s => s.location).filter(Boolean))];
+    lines.push("На эту дату смен не найдено.");
+    if (availableLocations.length) {
+      lines.push("", "<i>Локации в синхронизации:</i>", ...availableLocations.slice(0, 12).map(value => "• " + escapeHtml(value)));
+    } else {
+      lines.push("", "<i>В базе нет смен за эту дату. Проверь последнюю синхронизацию Connecteam.</i>");
+    }
+  } else {
+    lines.push(`Всего: ${ids.length} сотрудников`);
+  }
   await telegramApi("sendMessage", { chat_id: chat, text: lines.join("\n"), parse_mode: "HTML" });
 }
 
