@@ -4,7 +4,7 @@ import { createAdminClient, telegramApi } from "@/lib/telegram-server";
 import { ADMIN_TELEGRAM_ID, ADMIN_USERNAME, copy, getLanguage, type Lang, type Update } from "./config";
 import { escapeHtml } from "./utils";
 import { menuKeyboard, sendMenu } from "./menu";
-import { showStaffLocations, showStaffDates, showStaffForDate } from "./features/staff";
+import { showStaffHome, showStaffLocations, showStaffDates, showStaffForDate, showStaffEmployees, showStaffEmployeeWeek } from "./features/staff";
 import { showSchedule, showMonthShifts, showEarnings, showGuide, toggleReminders } from "./features/dashboard";
 import { showStaffLeaderboard } from "./features/staff-leaderboard";
 
@@ -171,7 +171,13 @@ export async function handleTelegramWebhook(request: Request) {
           // prevent handling the action or cause webhook retry storms.
           console.warn("Telegram callback acknowledgement failed", callbackError);
         }
-        if (parts[1] === "loc") await showStaffDates(chat, Number(parts[2]), q.message?.message_id);
+        if (parts[1] === "home") await showStaffHome(chat, q.message?.message_id);
+        else if (parts[1] === "locations") await showStaffLocations(chat, q.message?.message_id);
+        else if (parts[1] === "leaderboard") await showStaffLeaderboard(chat, q.message?.message_id);
+        else if (parts[1] === "employees") await showStaffEmployees(chat, Number(parts[2] || 0), q.message?.message_id);
+        else if (parts[1] === "person") await showStaffEmployeeWeek(chat, parts[2] || "", Number(parts[3] || 0), q.message?.message_id);
+        else if (parts[1] === "noop") { /* Pagination indicator only. */ }
+        else if (parts[1] === "loc") await showStaffDates(chat, Number(parts[2]), q.message?.message_id);
         else if (parts[1] === "date") await showStaffForDate(chat, Number(parts[2]), parts[3], q.message?.message_id);
         else if (parts[1] === "back" && parts[2] === "loc") await showStaffLocations(chat, q.message?.message_id);
         else if (parts[1] === "back" && parts[2] === "dates") await showStaffDates(chat, Number(parts[3]), q.message?.message_id);
