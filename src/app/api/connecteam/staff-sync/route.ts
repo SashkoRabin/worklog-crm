@@ -72,9 +72,33 @@ async function requestConnecteam<T>(path: string, method: "GET" | "POST", body?:
   if (!result.data) throw new Error("Connecteam response did not contain data.");
   return result.data as T;
 }
-function toEpoch(date: string, end = false) {
+function addDays(date: string, days: number) {
   const [year, month, day] = date.split("-").map(Number);
-  return Date.UTC(year, month - 1, day, end ? 23 : 0, end ? 59 : 0, end ? 59 : 0) / 1000;
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+function pragueMidnightEpoch(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  const target = Date.UTC(year, month - 1, day, 0, 0, 0);
+  let candidate = target;
+  const formatter = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Prague", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
+  for (let i = 0; i < 3; i++) {
+    const parts = Object.fromEntries(formatter.formatToParts(new Date(candidate)).map(p => [p.type, p.value]));
+    const represented = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute), Number(parts.second));
+    const delta = target - represented;
+    candidate += delta;
+    if (delta === 0) break;
+  }
+  return Math.floor(candidate / 1000);
+}
+
+function extractShifts(payload: unknown): ConnecteamShift[] {
+  if (Array.isArray(payload)) return payload as ConnecteamShift[];
+  if (!payload || typeof payload !== "object") return [];
+  const value = payload as Record<string, unknown>;
+  if (Array.isArray(value.shifts)) return value.shifts as ConnecteamShift[];
+  if (value.data && typeof value.data === "object" && Array.isArray((value.data as Record<string, unknown>).shifts)) return (value.data as { shifts: ConnecteamShift[] }).shifts;
+  return [];
 }
 
 export async function GET(request: Request) {
@@ -85,10 +109,10 @@ export async function GET(request: Request) {
   try {
     credentials();
     const today = localDate(Date.now() / 1000);
-    const startDate = new Date(Date.now() - 45 * 86400_000).toISOString().slice(0, 10);
-    const endDate = new Date(Date.now() + 90 * 86400_000).toISOString().slice(0, 10);
-    const startTime = toEpoch(startDate);
-    const endTime = toEpoch(endDate, true);
+    const startDate = addDays(today, -45);
+    const endDate = addDays(today, 90);
+    const startTime = pragueMidnightEpoch(startDate);
+    const endTime = pragueMidnightEpoch(addDays(endDate, 1)) - 1;
 
     const [shiftData, userData] = await Promise.all([
       requestConnecteam<{ shifts: ConnecteamShift[] }>(
@@ -109,9 +133,13 @@ export async function GET(request: Request) {
       ),
     ]);
 
-    const shifts = Array.isArray(shiftData.shifts) ? shiftData.shifts : [];
+    const shifts = extractShifts(shiftData);
     const users = Array.isArray(userData.users) ? userData.users : [];
     if (!users.length) throw new Error("Connecteam directory returned no users; refusing to overwrite the current snapshot.");
+    if (!shifts.length) {
+      const payloadKeys = shiftData && typeof shiftData === "object" ? Object.keys(shiftData as object) : [];
+      throw new Error("Connecteam returned zero shifts for " + startDate + ".." + endDate + ". Payload keys: " + (payloadKeys.join(", ") || "none") + ". Existing database snapshot was preserved.");
+    }
 
     const db = createAdminClient();
     const syncedAt = new Date().toISOString();
@@ -152,6 +180,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       ok: true, shifts: shiftRows.length, users: userRows.length, startDate, endDate, syncedAt,
+      locations: [...new Set(shiftRows.map(row => row.location))].sort(),
+      shiftsWithAssignments: shiftRows.filter(row => row.user_ids.length > 0).length,
     });
   } catch (error) {
     console.error("Connecteam staff sync failed", error);
