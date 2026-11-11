@@ -6,7 +6,73 @@ import { addDays, datePartsInZone, escapeHtml, formatDate, money } from "../util
 
 import { appUrl, menuKeyboard } from "../menu";
 
-export async function showSchedule(chatId: number, linkedUserId: string, lang: Lang, timezone: string) {
+
+export async function showScheduleMenu(chatId: number, lang: Lang) {
+  const title = lang === "ru" ? "📅 <b>РАСПИСАНИЕ</b>\\n<i>Выбери нужный формат просмотра смен</i>" : lang === "cs" ? "📅 <b>ROZVRH</b>\\n<i>Vyber způsob zobrazení směn</i>" : "📅 <b>SCHEDULE</b>\\n<i>Choose how to view your shifts</i>";
+  const labels = lang === "ru"
+    ? ["⏳ Предстоящие смены", "📋 Список смен · за месяц", "🗓 Расписание · на неделю", "🏠 Главное меню"]
+    : lang === "cs"
+      ? ["⏳ Nadcházející směny", "📋 Směny · tento měsíc", "🗓 Rozvrh · tento týden", "🏠 Hlavní nabídka"]
+      : ["⏳ Upcoming shifts", "📋 Shifts · this month", "🗓 Schedule · this week", "🏠 Main menu"];
+  await telegramApi("sendMessage", {
+    chat_id: chatId,
+    text: title,
+    parse_mode: "HTML",
+    reply_markup: { inline_keyboard: [
+      [{ text: labels[0], callback_data: "schedule:upcoming" }],
+      [{ text: labels[1], callback_data: "schedule:month" }],
+      [{ text: labels[2], callback_data: "schedule:week" }],
+      [{ text: labels[3], callback_data: "schedule:close" }],
+    ] },
+  });
+}
+
+export async function showUpcomingShifts(chatId: number, linkedUserId: string, lang: Lang, timezone: string) {
+  const db = createAdminClient(), t = copy[lang], zone = timezone || "Europe/Prague";
+  const now = new Date();
+  const today = datePartsInZone(now, zone);
+  const todayString = `${today.year}-${today.month}-${today.day}`;
+  const endDate = addDays(todayString, 7);
+  const { data, error } = await db.from("shifts")
+    .select("id,work_date,store,shift_name,shift_type,hours,hourly_rate,source")
+    .eq("user_id", linkedUserId).gte("work_date", todayString).lte("work_date", endDate)
+    .order("work_date", { ascending: true });
+  if (error) throw error;
+
+  const timeParts = new Intl.DateTimeFormat("en-GB", { timeZone: zone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
+  const currentMinutes = Number(timeParts.find(part => part.type === "hour")?.value || 0) * 60
+    + Number(timeParts.find(part => part.type === "minute")?.value || 0);
+  const getStartMinutes = (name: string) => {
+    const match = name.match(/(\\d{1,2}):(\\d{2})\\s*[–—-]\\s*\\d{1,2}:\\d{2}/);
+    return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+  };
+  const shifts = ((data || []) as Shift[]).filter(shift => {
+    if (shift.work_date > todayString) return true;
+    const start = getStartMinutes(shift.shift_name);
+    return start !== null && start > currentMinutes;
+  }).sort((a, b) => a.work_date.localeCompare(b.work_date)
+    || (getStartMinutes(a.shift_name) ?? Number.MAX_SAFE_INTEGER) - (getStartMinutes(b.shift_name) ?? Number.MAX_SAFE_INTEGER));
+
+  if (!shifts.length) {
+    const empty = lang === "ru" ? "⏳ <b>Предстоящих смен нет.</b>\\n\\nНа ближайшие 7 дней новых смен не запланировано." : lang === "cs" ? "⏳ <b>Žádné nadcházející směny.</b>" : "⏳ <b>No upcoming shifts.</b>";
+    await telegramApi("sendMessage", { chat_id: chatId, text: empty, parse_mode: "HTML" });
+    return;
+  }
+  const grouped = new Map<string, Shift[]>();
+  for (const shift of shifts) grouped.set(shift.work_date, [...(grouped.get(shift.work_date) || []), shift]);
+  const lines = [lang === "ru" ? "⏳ <b>ПРЕДСТОЯЩИЕ СМЕНЫ</b>" : lang === "cs" ? "⏳ <b>NADCHÁZEJÍCÍ SMĚNY</b>" : "⏳ <b>UPCOMING SHIFTS</b>", "━━━━━━━━━━━━━━━━━━", ""];
+  for (const [date, items] of grouped) {
+    lines.push(`<b>📅 ${formatDate(date, lang)}</b>`);
+    for (const shift of items) {
+      const time = shift.shift_name.match(/\\d{1,2}:\\d{2}\\s*[–—-]\\s*\\d{1,2}:\\d{2}/)?.[0] || shift.shift_name;
+      lines.push(`• <b>${escapeHtml(shift.store)}</b> · ${escapeHtml(time)}`);
+    }
+    lines.push("");
+  }
+  lines.push("━━━━━━━━━━━━━━━━━━");
+  await telegramApi("sendMessage", { chat_id: chatId, text: lines.join("\\n"), parse_mode: "HTML" });
+}
+\nexport async function showSchedule(chatId: number, linkedUserId: string, lang: Lang, timezone: string) {
   const db = createAdminClient(), t = copy[lang], zone = timezone || "Europe/Prague";
   const today = datePartsInZone(new Date(), zone);
   const todayString = `${today.year}-${today.month}-${today.day}`;
