@@ -14,7 +14,7 @@ export const copy = {
   en: {
     choose: "Welcome to WorkLog! Choose your language.",
     welcome: "👋 <b>Welcome to WorkLog</b>\n\nYour personal workspace for shifts, working hours and earnings. Use the menu below to open your dashboard, check your weekly schedule or review your income.",
-    open: "🌐 Open WorkLog", guideMenu: "📚 Guide", schedule: "📅 Schedule", monthShifts: "🗂 All shifts", earnings: "💰 Hours & earnings",
+    open: "🌐 Open WorkLog", guideMenu: "📚 Guide", scheduleMenu: "📅 Schedule", schedule: "📅 Schedule", monthShifts: "🗂 All shifts", earnings: "💰 Hours & earnings",
     remindersOn: "🔕 Turn reminders off", remindersOff: "🔔 Turn reminders on", enabled: "🔔 <b>Reminders enabled</b>\n\nI’ll notify you before each upcoming shift.", disabled: "🔕 <b>Reminders disabled</b>\n\nYou can turn them back on anytime from this menu.",
     linked: "✅ <b>Telegram connected!</b>\n\nYour WorkLog account is linked. Shift reminders are enabled by default.",
     badLink: "⚠️ This link is invalid, expired or already used. Generate a new one in WorkLog → Telegram.",
@@ -31,7 +31,7 @@ export const copy = {
   ru: {
     choose: "Добро пожаловать в WorkLog! Выбери язык.",
     welcome: "👋 <b>Добро пожаловать в WorkLog</b>\n\nТвой персональный помощник для учёта смен, рабочего времени и заработка. Используй меню ниже, чтобы открыть приложение, посмотреть расписание или проверить доход.",
-    open: "🌐 Открыть WorkLog", guideMenu: "📚 Руководство", schedule: "📅 Расписание", monthShifts: "🗂 Список смен", earnings: "💰 Часы и заработок",
+    open: "🌐 Открыть WorkLog", guideMenu: "📚 Руководство", scheduleMenu: "📅 Расписание", schedule: "📅 Расписание", monthShifts: "🗂 Список смен", earnings: "💰 Часы и заработок",
     remindersOn: "🔕 Выключить напоминания", remindersOff: "🔔 Включить напоминания", enabled: "🔔 <b>Напоминания включены</b>\n\nБуду присылать уведомления перед предстоящими сменами.", disabled: "🔕 <b>Напоминания выключены</b>\n\nВ любой момент можешь включить их обратно через меню.",
     linked: "✅ <b>Telegram подключён!</b>\n\nАккаунт WorkLog успешно привязан. Напоминания о сменах включены по умолчанию.",
     badLink: "⚠️ Ссылка недействительна, устарела или уже использована. Создай новую в WorkLog → Telegram.",
@@ -48,7 +48,7 @@ export const copy = {
   cs: {
     choose: "Vítej ve WorkLogu! Vyber si jazyk.",
     welcome: "👋 <b>Vítej ve WorkLogu</b>\n\nTvůj osobní prostor pro směny, pracovní dobu a výdělek. Pomocí nabídky níže otevři aplikaci, zobraz rozvrh nebo zkontroluj příjem.",
-    open: "🌐 Otevřít WorkLog", guideMenu: "📚 Návod", schedule: "📅 Rozvrh", monthShifts: "🗂 Všechny směny", earnings: "💰 Hodiny a výdělek",
+    open: "🌐 Otevřít WorkLog", guideMenu: "📚 Návod", scheduleMenu: "📅 Rozvrh", schedule: "📅 Rozvrh", monthShifts: "🗂 Všechny směny", earnings: "💰 Hodiny a výdělek",
     remindersOn: "🔕 Vypnout připomenutí", remindersOff: "🔔 Zapnout připomenutí", enabled: "🔔 <b>Připomenutí zapnuta</b>\n\nUpozorním tě před každou nadcházející směnou.", disabled: "🔕 <b>Připomenutí vypnuta</b>\n\nKdykoli je můžeš znovu zapnout v nabídce.",
     linked: "✅ <b>Telegram je propojen!</b>\n\nTvůj účet WorkLog je propojen. Připomenutí směn jsou ve výchozím nastavení zapnutá.",
     badLink: "⚠️ Odkaz je neplatný, vypršel nebo už byl použit. Vytvoř nový ve WorkLog → Telegram.",
