@@ -162,7 +162,7 @@ export async function showStaffEmployeeWeek(chat: number, userId: string, page =
     .filter(shift => (shift.user_ids || []).map(String).includes(userId))
     .sort((a, b) => a.work_date.localeCompare(b.work_date) || a.start_time.localeCompare(b.start_time));
   const seen = new Set<string>();
-  const uniqueShifts = shifts.filter((shift, index) => {
+  const uniqueShifts = shifts.filter(shift => {
     const key = shift.connecteam_shift_id || `${shift.work_date}:${shift.start_time}:${shift.end_time}`;
     if (seen.has(key)) return false;
     seen.add(key);
