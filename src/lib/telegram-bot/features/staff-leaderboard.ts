@@ -35,11 +35,10 @@ function localMidnightEpoch(date: string, timezone: string) {
 
 export async function showStaffLeaderboard(chatId: number) {
   const timezone = "Europe/Prague";
-  const now = Math.floor(Date.now() / 1000);
-  const today = datePartsInZone(new Date(now * 1000), timezone);
+  const now = new Date();
+  const today = datePartsInZone(now, timezone);
   const todayString = `${today.year}-${today.month}-${today.day}`;
   const monthStart = `${today.year}-${today.month}-01`;
-  const fromEpoch = localMidnightEpoch(monthStart, timezone);
   const db = createAdminClient();
 
   const [{ data: shifts, error: shiftsError }, { data: users, error: usersError }] = await Promise.all([
@@ -62,9 +61,10 @@ export async function showStaffLeaderboard(chatId: number) {
   const totals = new Map<string, number>();
   const seenAssignments = new Set<string>();
   for (const shift of (shifts || []) as StaffShift[]) {
-    const start = Math.max(Number(shift.start_epoch), fromEpoch);
-    const end = Math.min(Number(shift.end_epoch), now);
+    const start = Number(shift.start_epoch);
+    const end = Number(shift.end_epoch);
     if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
+    // Count the complete scheduled shift, even if it has not ended yet today.
     const durationHours = (end - start) / 3600;
     for (const rawId of shift.user_ids || []) {
       const userId = String(rawId);
@@ -80,12 +80,12 @@ export async function showStaffLeaderboard(chatId: number) {
     .sort((a, b) => b.hours - a.hours || a.name.localeCompare(b.name, "ru"))
     .slice(0, 10);
 
-  const period = `1–${Number(today.day)} ${new Intl.DateTimeFormat("ru-RU", { month: "long", timeZone: timezone }).format(new Date(now * 1000))}`;
+  const period = `1–${Number(today.day)} ${new Intl.DateTimeFormat("ru-RU", { month: "long", timeZone: timezone }).format(now)}`;
   const number = (value: number) => value.toLocaleString("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const lines = [
     "🏆 <b>Топ-10 сотрудников по часам</b>",
     `📅 Период: ${period}`,
-    "<i>Учитываются фактические часы смен с начала месяца по текущий момент.</i>",
+    "<i>Учитывается полная продолжительность каждой смены: от начала до конца.</i>",
     "",
   ];
   if (!ranking.length) {
@@ -95,8 +95,7 @@ export async function showStaffLeaderboard(chatId: number) {
       const medal = ["🥇", "🥈", "🥉"][index] || `${index + 1}.`;
       lines.push(`${medal} <b>${escapeHtml(item.name)}</b> · <b>${number(item.hours)} ч</b>`);
     });
-    const total = ranking.reduce((sum, item) => sum + item.hours, 0);
-    lines.push("", `👥 В рейтинге: ${ranking.length}`, `⏱ Сумма часов топ-10: <b>${number(total)} ч</b>`);
+    lines.push("", `👥 В рейтинге: ${ranking.length}`);
   }
 
   await telegramApi("sendMessage", { chat_id: chatId, text: lines.join("\n"), parse_mode: "HTML" });
