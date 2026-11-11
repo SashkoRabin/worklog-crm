@@ -167,9 +167,9 @@ export async function handleTelegramWebhook(request: Request) {
           // prevent handling the action or cause webhook retry storms.
           console.warn("Telegram callback acknowledgement failed", callbackError);
         }
-        if (parts[1] === "location") await showStaffDates(chat, Number(parts[2]), q.message?.message_id);
+        if (parts[1] === "loc") await showStaffDates(chat, Number(parts[2]), q.message?.message_id);
         else if (parts[1] === "date") await showStaffForDate(chat, Number(parts[2]), parts[3], q.message?.message_id);
-        else if (parts[1] === "back" && parts[2] === "locations") await showStaffLocations(chat, q.message?.message_id);
+        else if (parts[1] === "back" && parts[2] === "loc") await showStaffLocations(chat, q.message?.message_id);
         else if (parts[1] === "back" && parts[2] === "dates") await showStaffDates(chat, Number(parts[3]), q.message?.message_id);
         else if (parts[1] === "menu") {
           if (q.message?.message_id) {
