@@ -78,7 +78,8 @@ function menuKeyboard(lang: Lang, enabled: boolean) {
     keyboard: [
       [{ text: t.open, web_app: { url: appUrl() } }],
       [{ text: t.guideMenu }, { text: t.schedule }],
-      [{ text: t.monthShifts }, { text: t.earnings }],\n      [{ text: enabled ? t.remindersOn : t.remindersOff }],
+      [{ text: t.monthShifts }, { text: t.earnings }],
+      [{ text: enabled ? t.remindersOn : t.remindersOff }],
     ],
     resize_keyboard: true,
     is_persistent: true,
