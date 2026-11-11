@@ -178,7 +178,7 @@ async function showGuide(chatId: number, lang: Lang) {
     chat_id: chatId,
     text: `${t.guideTitle}\n\n${t.guide}`,
     parse_mode: "HTML",
-    reply_markup: { inline_keyboard: [[{ text: t.open, web_app: { url: appUrl() } }]] },
+    reply_markup: { inline_keyboard: [[{ text: t.open, web_app: { url: appUrl() } }], [{ text: t.connecteamButton, web_app: { url: appUrl() } }]] },
   });
 }
 async function toggleReminders(chatId: number, userId: number, account: Account) {
