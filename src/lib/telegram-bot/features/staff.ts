@@ -220,7 +220,7 @@ export async function showStaffEmployees(chat: number, page = 0, messageId?: num
   const description = employees.length
     ? `Выбери сотрудника из списка.\n👥 Всего активных сотрудников: ${employees.length}`
     : "Активные сотрудники не найдены. Проверь синхронизацию Connecteam.";
-  await renderStaff(chat, messageId, `🗓 <b>График сотрудника</b>\n\n${description}`, keyboard);
+  await renderStaff(chat, messageId, `🗓 <b>ГРАФИК СОТРУДНИКА</b>\n<i>Рабочая неделя и месячная статистика</i>\n\n${description}`, keyboard);
 }
 
 export async function showStaffEmployeeWeek(chat: number, userId: string, page = 0, messageId?: number) {
@@ -295,7 +295,7 @@ export async function showStaffEmployeeWeek(chat: number, userId: string, page =
       lines.push(`• ${escapeHtml(shift.start_time)}–${escapeHtml(shift.end_time)} · ${escapeHtml(shift.location)}`);
     }
   }
-  lines.push("", `⏱ <b>Всего часов за месяц: ${number(totalMonthHours)} ч</b>`);
+  lines.push("", "━━━━━━━━━━━━━━━━━━", `⏱ <b>Всего часов за месяц: ${number(totalMonthHours)} ч</b>`);
   await renderStaff(chat, messageId, lines.join("\n"), [
     [{ text: "⬅️ К списку сотрудников", callback_data: `staff:employees:${page}` }],
     [{ text: "🏠 В меню", callback_data: "staff:menu" }],
