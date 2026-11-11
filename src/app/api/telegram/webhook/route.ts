@@ -16,7 +16,7 @@ const copy = {
   en: {
     choose: "Welcome to WorkLog! Choose your language.",
     welcome: "👋 <b>Welcome to WorkLog</b>\n\nYour personal workspace for shifts, working hours and earnings. Use the menu below to open your dashboard, check your weekly schedule or review your income.",
-    open: "🌐 Open WorkLog", guideMenu: "📚 Guide", schedule: "📅 Schedule", earnings: "💰 Hours & earnings",
+    open: "🌐 Open WorkLog", guideMenu: "📚 Guide", schedule: "📅 Schedule", monthShifts: "🗂 All shifts", earnings: "💰 Hours & earnings",
     remindersOn: "🔕 Turn reminders off", remindersOff: "🔔 Turn reminders on", enabled: "🔔 <b>Reminders enabled</b>\n\nI’ll notify you before each upcoming shift.", disabled: "🔕 <b>Reminders disabled</b>\n\nYou can turn them back on anytime from this menu.",
     linked: "✅ <b>Telegram connected!</b>\n\nYour WorkLog account is linked. Shift reminders are enabled by default.",
     badLink: "⚠️ This link is invalid, expired or already used. Generate a new one in WorkLog → Telegram.",
@@ -33,7 +33,7 @@ const copy = {
   ru: {
     choose: "Добро пожаловать в WorkLog! Выбери язык.",
     welcome: "👋 <b>Добро пожаловать в WorkLog</b>\n\nТвой персональный помощник для учёта смен, рабочего времени и заработка. Используй меню ниже, чтобы открыть приложение, посмотреть расписание или проверить доход.",
-    open: "🌐 Открыть WorkLog", guideMenu: "📚 Руководство", schedule: "📅 Расписание", earnings: "💰 Часы и заработок",
+    open: "🌐 Открыть WorkLog", guideMenu: "📚 Руководство", schedule: "📅 Расписание", monthShifts: "🗂 Список смен", earnings: "💰 Часы и заработок",
     remindersOn: "🔕 Выключить напоминания", remindersOff: "🔔 Включить напоминания", enabled: "🔔 <b>Напоминания включены</b>\n\nБуду присылать уведомления перед предстоящими сменами.", disabled: "🔕 <b>Напоминания выключены</b>\n\nВ любой момент можешь включить их обратно через меню.",
     linked: "✅ <b>Telegram подключён!</b>\n\nАккаунт WorkLog успешно привязан. Напоминания о сменах включены по умолчанию.",
     badLink: "⚠️ Ссылка недействительна, устарела или уже использована. Создай новую в WorkLog → Telegram.",
@@ -50,7 +50,7 @@ const copy = {
   cs: {
     choose: "Vítej ve WorkLogu! Vyber si jazyk.",
     welcome: "👋 <b>Vítej ve WorkLogu</b>\n\nTvůj osobní prostor pro směny, pracovní dobu a výdělek. Pomocí nabídky níže otevři aplikaci, zobraz rozvrh nebo zkontroluj příjem.",
-    open: "🌐 Otevřít WorkLog", guideMenu: "📚 Návod", schedule: "📅 Rozvrh", earnings: "💰 Hodiny a výdělek",
+    open: "🌐 Otevřít WorkLog", guideMenu: "📚 Návod", schedule: "📅 Rozvrh", monthShifts: "🗂 Všechny směny", earnings: "💰 Hodiny a výdělek",
     remindersOn: "🔕 Vypnout připomenutí", remindersOff: "🔔 Zapnout připomenutí", enabled: "🔔 <b>Připomenutí zapnuta</b>\n\nUpozorním tě před každou nadcházející směnou.", disabled: "🔕 <b>Připomenutí vypnuta</b>\n\nKdykoli je můžeš znovu zapnout v nabídce.",
     linked: "✅ <b>Telegram je propojen!</b>\n\nTvůj účet WorkLog je propojen. Připomenutí směn jsou ve výchozím nastavení zapnutá.",
     badLink: "⚠️ Odkaz je neplatný, vypršel nebo už byl použit. Vytvoř nový ve WorkLog → Telegram.",
@@ -78,7 +78,7 @@ function menuKeyboard(lang: Lang, enabled: boolean) {
     keyboard: [
       [{ text: t.open, web_app: { url: appUrl() } }],
       [{ text: t.guideMenu }, { text: t.schedule }],
-      [{ text: t.earnings }, { text: enabled ? t.remindersOn : t.remindersOff }],
+      [{ text: t.monthShifts }, { text: t.earnings }],\n      [{ text: enabled ? t.remindersOn : t.remindersOff }],
     ],
     resize_keyboard: true,
     is_persistent: true,
@@ -152,6 +152,40 @@ async function showSchedule(chatId: number, userId: number, lang: Lang, timezone
     lines.push("");
   }
   await telegramApi("sendMessage", { chat_id: chatId, text: lines.join("\n").trim(), parse_mode: "HTML" });
+}
+async function showMonthShifts(chatId: number, userId: number, lang: Lang, timezone: string) {
+  const db = createAdminClient(), t = copy[lang], zone = timezone || "Europe/Prague";
+  const { data: accountData, error: accountError } = await db.from("telegram_accounts").select("linked_user_id").eq("telegram_user_id", userId).single();
+  if (accountError || !accountData?.linked_user_id) throw accountError || new Error("Telegram account is not linked to a WorkLog user.");
+  const today = datePartsInZone(new Date(), zone);
+  const monthStart = `${today.year}-${today.month}-01`;
+  const nextMonth = addDays(`${today.year}-${today.month}-01`, 32).slice(0, 7) + "-01";
+  const monthEnd = addDays(nextMonth, -1);
+  const { data, error } = await db.from("shifts").select("id,work_date,store,shift_name,shift_type,hours,hourly_rate,source").eq("user_id", accountData.linked_user_id).gte("work_date", monthStart).lte("work_date", monthEnd).order("work_date", { ascending: true });
+  if (error) throw error;
+  const shifts = (data || []) as Shift[];
+  if (!shifts.length) { await telegramApi("sendMessage", { chat_id: chatId, text: t.monthNoShifts, parse_mode: "HTML" }); return; }
+  const startMinutes = (name: string) => { const m = name.match(/(\d{1,2}):(\d{2})\s*[–—-]\s*\d{1,2}:\d{2}/); return m ? Number(m[1]) * 60 + Number(m[2]) : Number.MAX_SAFE_INTEGER; };
+  shifts.sort((a,b) => a.work_date.localeCompare(b.work_date) || startMinutes(a.shift_name) - startMinutes(b.shift_name));
+  const period = new Intl.DateTimeFormat(lang === "ru" ? "ru-RU" : lang === "cs" ? "cs-CZ" : "en-GB", { month: "long", year: "numeric", timeZone: zone }).format(new Date());
+  const totalHours = shifts.reduce((sum,s) => sum + Number(s.hours || 0), 0);
+  const totalMoney = shifts.reduce((sum,s) => sum + Number(s.hours || 0) * Number(s.hourly_rate || 0), 0);
+  const summary = t.monthSummary.replace("{count}", String(shifts.length)).replace("{hours}", totalHours.toLocaleString(lang === "ru" ? "ru-RU" : lang === "cs" ? "cs-CZ" : "en-GB", { maximumFractionDigits: 1 })).replace("{money}", money(totalMoney, lang));
+  const grouped = new Map<string, Shift[]>();
+  for (const shift of shifts) grouped.set(shift.work_date, [...(grouped.get(shift.work_date) || []), shift]);
+  const header = t.monthTitle.replace("{period}", period);
+  let message = `${header}\n\n${summary}\n\n`;
+  for (const [date, items] of grouped) {
+    const section = `<b>📅 ${formatDate(date, lang)}</b>\n` + items.map(shift => {
+      const time = shift.shift_name.match(/\d{1,2}:\d{2}\s*[–—-]\s*\d{1,2}:\d{2}/)?.[0] || shift.shift_name;
+      return `• <b>${escapeHtml(shift.store)}</b> · ${escapeHtml(time)}`;
+    }).join("\n") + "\n\n";
+    if (message.length + section.length > 3800) {
+      await telegramApi("sendMessage", { chat_id: chatId, text: message.trim(), parse_mode: "HTML" });
+      message = `${header} <i>(continued)</i>\n\n${section}`;
+    } else message += section;
+  }
+  if (message.trim()) await telegramApi("sendMessage", { chat_id: chatId, text: message.trim(), parse_mode: "HTML" });
 }
 async function showEarnings(chatId: number, userId: number, lang: Lang, timezone: string) {
   const db = createAdminClient(), zone = timezone || "Europe/Prague", t = copy[lang];
@@ -239,6 +273,10 @@ export async function POST(request: Request) {
         const { data: linked } = await db.from("telegram_accounts").select("linked_user_id").eq("telegram_user_id", id).single();
         if (!linked?.linked_user_id) await telegramApi("sendMessage", { chat_id: chat, text: lang === "ru" ? "Сначала привяжите Telegram к аккаунту WorkLog на сайте → Telegram." : "Connect your Telegram account to WorkLog first." });
         else await showSchedule(chat, id, lang, account.timezone || "Europe/Prague");
+      } else if (msg.text === t.monthShifts) {
+        const { data: linked } = await db.from("telegram_accounts").select("linked_user_id").eq("telegram_user_id", id).single();
+        if (!linked?.linked_user_id) await telegramApi("sendMessage", { chat_id: chat, text: lang === "ru" ? "Сначала привяжите Telegram к аккаунту WorkLog на сайте → Telegram." : "Connect your Telegram account to WorkLog first." });
+        else await showMonthShifts(chat, id, lang, account.timezone || "Europe/Prague");
       } else if (msg.text === t.earnings) {
         const { data: linked } = await db.from("telegram_accounts").select("linked_user_id").eq("telegram_user_id", id).single();
         if (!linked?.linked_user_id) await telegramApi("sendMessage", { chat_id: chat, text: lang === "ru" ? "Сначала привяжите Telegram к аккаунту WorkLog на сайте → Telegram." : "Connect your Telegram account to WorkLog first." });
