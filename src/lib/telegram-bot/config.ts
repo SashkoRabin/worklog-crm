@@ -10,7 +10,7 @@ export const ADMIN_TELEGRAM_ID = 626335067;
 
 export const ADMIN_USERNAME = "onesandred";
 
-const copy = {
+export const copy = {
   en: {
     choose: "Welcome to WorkLog! Choose your language.",
     welcome: "👋 <b>Welcome to WorkLog</b>\n\nYour personal workspace for shifts, working hours and earnings. Use the menu below to open your dashboard, check your weekly schedule or review your income.",
