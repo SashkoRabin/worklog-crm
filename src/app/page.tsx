@@ -167,16 +167,17 @@ export default function Home() {
     if (savedTheme) setTheme(savedTheme);
     document.documentElement.dataset.theme = savedTheme || "light";
     if (!client) return;
-    client.auth.getUser().then(async ({ data }) => {
-      if (!data.user) return;
-      setUser(data.user);
+    client.auth.getSession().then(async ({ data }) => {
+      const user = data.session?.user;
+      if (!user) return;
+      setUser(user);
       const [{ data: profile }, rows] = await Promise.all([
         client
           .from("profiles")
           .select("hourly_rate,display_name")
-          .eq("id", data.user.id)
+          .eq("id", user.id)
           .single(),
-        loadUserShifts(data.user.id),
+        loadUserShifts(user.id),
       ]);
       setShifts(rows);
       if (profile?.hourly_rate) setRate(Number(profile.hourly_rate));
@@ -185,7 +186,7 @@ export default function Home() {
       // Calendar synchronisation can take several seconds. Let the dashboard
       // become interactive first, then refresh only if the background sync did work.
       void syncConnecteamIfConnected().then((result) => {
-        if (result.synced) void loadUserShifts(data.user.id).then(setShifts);
+        if (result.synced) void loadUserShifts(user.id).then(setShifts);
       });
     });
   }, []);
