@@ -90,12 +90,9 @@ export async function handleTelegramWebhook(request: Request) {
       } else if (msg.text === t.earnings) {
         if (!account.linked_user_id) await telegramApi("sendMessage", { chat_id: chat, text: lang === "ru" ? "Сначала привяжите Telegram к аккаунту WorkLog на сайте → Telegram." : "Connect your Telegram account to WorkLog first." });
         else await showEarnings(chat, account.linked_user_id, lang, account.timezone || "Europe/Prague");
-      } else if (msg.text === "🏆 Топ сотрудников") {
-        if (id !== ADMIN_TELEGRAM_ID) await telegramApi("sendMessage", { chat_id: chat, text: "Эта команда доступна только администратору." });
-        else await showStaffLeaderboard(chat);
       } else if (msg.text === "/staff" || msg.text === "👥 Сотрудники") {
         if (id !== ADMIN_TELEGRAM_ID) await telegramApi("sendMessage", { chat_id: chat, text: "Эта команда доступна только администратору." });
-        else await showStaffLocations(chat);
+        else await showStaffHome(chat);
       } else if (msg.text === t.remindersOn || msg.text === t.remindersOff) {
         await toggleReminders(chat, id, account);
       }
