@@ -41,6 +41,23 @@ async function renderStaff(chat: number, messageId: number | undefined, text: st
   await telegramApi("sendMessage", payload);
 }
 
+async function renderStaffChunks(chat: number, messageId: number | undefined, lines: string[], keyboard: { text: string; callback_data: string }[][]) {
+  const chunks: string[] = [];
+  let current = "";
+  for (const line of lines) {
+    const candidate = current ? `${current}\\n${line}` : line;
+    if (candidate.length > 3800 && current) {
+      chunks.push(current);
+      current = line;
+    } else current = candidate;
+  }
+  if (current) chunks.push(current);
+  if (!chunks.length) chunks.push("Смен не найдено.");
+  for (let i = 0; i < chunks.length; i++) {
+    await renderStaff(chat, i === 0 ? messageId : undefined, chunks[i], i === chunks.length - 1 ? keyboard : []);
+  }
+}
+
 export async function showStaffHome(chat: number, messageId?: number) {
   await renderStaff(chat, messageId, "👥 <b>УПРАВЛЕНИЕ ПЕРСОНАЛОМ</b>\n<i>Сотрудники и рабочие смены</i>\n\nВыбери раздел:", [
     [{ text: "📅 Расписание", callback_data: "staff:schedule" }],
@@ -53,14 +70,7 @@ export async function showStaffHome(chat: number, messageId?: number) {
 type ScheduleMode = "upcoming" | "month" | "week";
 
 export async function showStaffScheduleHome(chat: number, messageId?: number) {
-  await renderStaff(chat, messageId,
-    "📅 <b>РАСПИСАНИЕ</b>\n<i>Просмотр рабочих смен команды</i>\n\nВыбери формат просмотра:",
-    [
-      [{ text: "⏳ Предстоящие смены", callback_data: "staff:shifts:upcoming" }],
-      [{ text: "📋 Список смен · за месяц", callback_data: "staff:shifts:month" }],
-      [{ text: "🗓 Расписание · на неделю", callback_data: "staff:shifts:week" }],
-      [{ text: "⬅️ Сотрудники", callback_data: "staff:home" }],
-    ]);
+  await showStaffLocations(chat, messageId);
 }
 
 export async function showStaffScheduleLocations(chat: number, mode: ScheduleMode, messageId?: number) {
@@ -141,9 +151,66 @@ export async function showStaffScheduleShifts(chat: number, mode: ScheduleMode, 
 
 export async function showStaffLocations(chat: number, messageId?: number) {
   const rows: { text: string; callback_data: string }[][] = [];
-  STAFF_LOCATIONS.forEach((name, i) => { const row = Math.floor(i / 2); rows[row] ||= []; rows[row].push({ text: name, callback_data: `staff:loc:${i}` }); });
-  await renderStaff(chat, messageId, "📍 <b>Расписание по точке</b>\n\nВыбери локацию, чтобы посмотреть расписание команды.", [...rows, [{ text: "⬅️ Сотрудники", callback_data: "staff:home" }]]);
+  STAFF_LOCATIONS.forEach((name, i) => {
+    const row = Math.floor(i / 2);
+    rows[row] ||= [];
+    rows[row].push({ text: name, callback_data: `staff:loc:${i}` });
+  });
+  await renderStaff(chat, messageId,
+    "📅 <b>РАСПИСАНИЕ СОТРУДНИКОВ</b>\\n<i>Сначала выбери точку, затем дату</i>\\n\\n📍 <b>Локация</b>",
+    [...rows, [{ text: "🌐 Все локации", callback_data: "staff:all:dates" }], [{ text: "⬅️ Сотрудники", callback_data: "staff:home" }]]);
 }
+
+export async function showStaffAllDates(chat: number, messageId?: number) {
+  await renderStaff(chat, messageId, "🌐 <b>ВСЕ ЛОКАЦИИ</b>\\n\\nВыбери дату:", [
+    [{ text: "Вчера", callback_data: "staff:all:date:y" }, { text: "Сегодня", callback_data: "staff:all:date:t" }, { text: "Завтра", callback_data: "staff:all:date:n" }],
+    [{ text: "⬅️ К локациям", callback_data: "staff:back:loc" }, { text: "🏠 В меню", callback_data: "staff:menu" }],
+  ]);
+}
+
+export async function showStaffAllForDate(chat: number, mode: string, messageId?: number) {
+  const today = staffToday(), date = mode === "y" ? addDays(today, -1) : mode === "n" ? addDays(today, 1) : today;
+  const db = createAdminClient();
+  const { data, error } = await db.from("connecteam_staff_shifts")
+    .select("connecteam_shift_id,work_date,location,start_time,end_time,user_ids")
+    .eq("work_date", date).order("location", { ascending: true }).order("start_time", { ascending: true });
+  if (error) throw error;
+  const shifts = (data || []) as StaffShift[];
+  const ids = [...new Set(shifts.flatMap(shift => (shift.user_ids || []).map(String)))];
+  const { data: users, error: usersError } = await db.from("connecteam_staff_users")
+    .select("connecteam_user_id,first_name,last_name")
+    .in("connecteam_user_id", ids.length ? ids : ["__none__"]);
+  if (usersError) throw usersError;
+  const names = new Map((users || []).map(user => [String(user.connecteam_user_id), `${user.first_name} ${user.last_name}`.trim()]));
+  const grouped = new Map<string, StaffShift[]>();
+  for (const shift of shifts) {
+    const location = shift.location || "Локация не указана";
+    grouped.set(location, [...(grouped.get(location) || []), shift]);
+  }
+  const lines = ["🌐 <b>РАСПИСАНИЕ · ВСЕ ЛОКАЦИИ</b>", `📅 ${formatDate(date, "ru")}`, "━━━━━━━━━━━━━━━━━━", ""];
+  let total = 0;
+  for (const [location, locationShifts] of grouped) {
+    lines.push(`📍 <b>${escapeHtml(location)}</b>`);
+    const seen = new Set<string>();
+    for (const shift of locationShifts) {
+      const key = shift.connecteam_shift_id || `${shift.start_time}:${shift.end_time}:${(shift.user_ids || []).join(",")}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const assigned = (shift.user_ids || []).map(String).map(id => names.get(id)).filter((name): name is string => Boolean(name));
+      lines.push(`🕒 <b>${escapeHtml(shift.start_time)}–${escapeHtml(shift.end_time)}</b>`);
+      lines.push(`👥 ${assigned.length ? assigned.map(escapeHtml).join(", ") : "Сотрудники не назначены"}`);
+      total++;
+    }
+    lines.push("");
+  }
+  if (!shifts.length) lines.push("На эту дату смен не найдено.");
+  else lines.push("━━━━━━━━━━━━━━━━━━", `Всего смен: <b>${total}</b>`);
+  await renderStaffChunks(chat, messageId, lines, [
+    [{ text: "🔄 Другая дата", callback_data: "staff:all:dates" }],
+    [{ text: "⬅️ К локациям", callback_data: "staff:back:loc" }, { text: "🏠 В меню", callback_data: "staff:menu" }],
+  ]);
+}
+
 export async function showStaffDates(chat: number, index: number, messageId?: number) {
   const location = STAFF_LOCATIONS[index]; if (!location) return;
   await renderStaff(chat, messageId, `📍 <b>${escapeHtml(location)}</b>\n\nНа какую дату показать смены?`, [
@@ -189,7 +256,7 @@ export async function showStaffForDate(chat: number, index: number, mode: string
     lines.push(`👥 Всего сотрудников: <b>${ids.length}</b>`);
   }
   const keyboard = [[{ text: "🔄 Другая дата", callback_data: `staff:back:dates:${index}` }], staffNav(index, "loc")];
-  await renderStaff(chat, messageId, lines.join("\n"), keyboard);
+  await renderStaffChunks(chat, messageId, lines, keyboard);
 }
 
 export async function showStaffEmployees(chat: number, page = 0, messageId?: number) {
