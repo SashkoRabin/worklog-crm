@@ -5,7 +5,7 @@ import { ADMIN_TELEGRAM_ID, ADMIN_USERNAME, copy, getLanguage, type Lang, type U
 import { escapeHtml } from "./utils";
 import { menuKeyboard, sendMenu } from "./menu";
 import { showStaffHome, showStaffScheduleHome, showStaffScheduleLocations, showStaffScheduleShifts, showStaffEmployees, showStaffEmployeeWeek } from "./features/staff";
-import { showSchedule, showMonthShifts, showEarnings, showGuide, toggleReminders } from "./features/dashboard";
+import { showSchedule, showMonthShifts, showEarnings, showGuide, showScheduleMenu, showUpcomingShifts, toggleReminders } from "./features/dashboard";
 import { showStaffLeaderboard } from "./features/staff-leaderboard";
 
 function matchSecret(received: string | null, expected: string) {
@@ -81,7 +81,7 @@ export async function handleTelegramWebhook(request: Request) {
         await telegramApi("sendMessage", { chat_id: chat, text: t.menuHint, reply_markup: menuKeyboard(lang, account.reminders_enabled) });
       } else if (msg.text === t.guideMenu) {
         await showGuide(chat, lang);
-      } else if (msg.text === t.schedule) {
+      } else if (msg.text === t.scheduleMenu) {\n        await showScheduleMenu(chat, lang);\n      } else if (msg.text === t.schedule) {
         if (!account.linked_user_id) await telegramApi("sendMessage", { chat_id: chat, text: lang === "ru" ? "Сначала привяжите Telegram к аккаунту WorkLog на сайте → Telegram." : "Connect your Telegram account to WorkLog first." });
         else await showSchedule(chat, account.linked_user_id, lang, account.timezone || "Europe/Prague");
       } else if (msg.text === t.monthShifts) {
@@ -155,10 +155,29 @@ export async function handleTelegramWebhook(request: Request) {
         return NextResponse.json({ ok: true });
       }
 
-      const { data: account, error } = await db.from("telegram_accounts").select("language,reminders_enabled,timezone").eq("telegram_user_id", q.from.id).single();
+      const { data: account, error } = await db.from("telegram_accounts").select("language,reminders_enabled,timezone,linked_user_id").eq("telegram_user_id", q.from.id).single();
       if (error) throw error;
       const lang = getLanguage(account.language);
-      if (q.data?.startsWith("staff:")) {
+      if (q.data?.startsWith("schedule:")) {
+        await telegramApi("answerCallbackQuery", { callback_query_id: q.id });
+        const action = q.data.split(":")[1];
+        if (action === "close") {
+          if (q.message?.message_id) {
+            try { await telegramApi("deleteMessage", { chat_id: chat, message_id: q.message.message_id }); }
+            catch (deleteError) { console.warn("Could not close schedule submenu", deleteError); }
+          }
+        } else if (["upcoming", "month", "week"].includes(action)) {
+          if (!account.linked_user_id) {
+            await telegramApi("sendMessage", { chat_id: chat, text: lang === "ru" ? "Сначала привяжите Telegram к аккаунту WorkLog на сайте → Telegram." : "Connect your Telegram account to WorkLog first." });
+          } else if (action === "upcoming") {
+            await showUpcomingShifts(chat, account.linked_user_id, lang, account.timezone || "Europe/Prague");
+          } else if (action === "month") {
+            await showMonthShifts(chat, account.linked_user_id, lang, account.timezone || "Europe/Prague");
+          } else {
+            await showSchedule(chat, account.linked_user_id, lang, account.timezone || "Europe/Prague");
+          }
+        }
+      } else if (q.data?.startsWith("staff:")) {
         if (q.from.id !== ADMIN_TELEGRAM_ID) { await telegramApi("answerCallbackQuery", { callback_query_id: q.id, text: "Недостаточно прав.", show_alert: true }); return NextResponse.json({ ok: true }); }
         const parts = q.data.split(":");
         try {
