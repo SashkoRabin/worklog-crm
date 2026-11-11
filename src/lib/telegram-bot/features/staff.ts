@@ -190,14 +190,12 @@ export async function showStaffAllForDate(chat: number, mode: string, messageId?
   const lines = [
     "🌐 <b>РАСПИСАНИЕ · ВСЕ ЛОКАЦИИ</b>",
     `📅 <b>${formatDate(date, "ru")}</b>`,
-    "━━━━━━━━━━━━━━━━━━━━",
     "",
   ];
   let total = 0;
   for (const [location, locationShifts] of grouped) {
-    if (total > 0) lines.push("────────────────────", "");
+    if (total > 0) lines.push("");
     lines.push(`📍 <b>${escapeHtml(location)}</b>`);
-    lines.push("<i>────────────────</i>");
     const seen = new Set<string>();
     for (const shift of locationShifts) {
       const key = shift.connecteam_shift_id || `${shift.start_time}:${shift.end_time}:${(shift.user_ids || []).join(",")}`;
@@ -215,7 +213,7 @@ export async function showStaffAllForDate(chat: number, mode: string, messageId?
     }
   }
   if (!shifts.length) lines.push("Смен на эту дату не найдено.");
-  else lines.push("━━━━━━━━━━━━━━━━━━━━", `📊 <b>Всего смен: ${total}</b>`);
+  else lines.push(`📊 <b>Всего смен: ${total}</b>`);
   await renderStaffChunks(chat, messageId, lines, [
     [{ text: "🔄 Другая дата", callback_data: "staff:all:dates" }],
     [{ text: "⬅️ К локациям", callback_data: "staff:back:loc" }, { text: "🏠 В меню", callback_data: "staff:menu" }],
