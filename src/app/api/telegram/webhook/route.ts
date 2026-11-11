@@ -257,7 +257,14 @@ export async function POST(request: Request) {
         } else {
           const { data: draft, error: draftError } = await db.from("telegram_broadcasts")
             .insert({ message, created_by: id, status: "draft" }).select("id").single();
-          if (draftError) throw draftError;
+          if (draftError) {
+            console.error("Telegram broadcast table is unavailable", draftError);
+            await telegramApi("sendMessage", {
+              chat_id: chat,
+              text: "Функция рассылки пока не настроена в Supabase. Выполни миграцию supabase/telegram-admin-migration.sql.",
+            });
+            return NextResponse.json({ ok: true });
+          }
           await telegramApi("sendMessage", {
             chat_id: chat,
             text: `Предпросмотр рассылки от @${ADMIN_USERNAME}:\n\n${message}\n\nОтправить всем пользователям с привязанным Telegram?`,
