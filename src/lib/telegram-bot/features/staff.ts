@@ -198,7 +198,8 @@ export async function showStaffAllForDate(chat: number, mode: string, messageId?
       seen.add(key);
       const assigned = (shift.user_ids || []).map(String).map(id => names.get(id)).filter((name): name is string => Boolean(name));
       lines.push(`🕒 <b>${escapeHtml(shift.start_time)}–${escapeHtml(shift.end_time)}</b>`);
-      lines.push(`👥 ${assigned.length ? assigned.map(escapeHtml).join(", ") : "Сотрудники не назначены"}`);
+      if (assigned.length) for (const name of assigned) lines.push(`👤 ${escapeHtml(name)}`);
+      else lines.push("👥 Сотрудники не назначены");
       total++;
     }
     lines.push("");
