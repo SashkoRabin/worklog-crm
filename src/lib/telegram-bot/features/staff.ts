@@ -71,7 +71,7 @@ export async function showStaffForDate(chat: number, index: number, mode: string
     .eq("work_date", date)
     .order("start_time", { ascending: true });
   if (error) throw error;
-  const normalizeLocation = (value: string) => value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLocaleLowerCase("en").replace(/[^a-z0-9]+/g, " ").trim();
+  const normalizeLocation = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("en").replace(/[^a-z0-9]+/g, " ").trim();
   const normalizeTarget = normalizeLocation(location);
   const allDateShifts = (data || []) as StaffShift[];
   const shifts = allDateShifts.filter(shift => {
