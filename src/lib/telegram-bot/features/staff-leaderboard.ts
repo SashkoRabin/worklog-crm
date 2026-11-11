@@ -14,26 +14,7 @@ type StaffUser = {
   is_archived: boolean;
 };
 
-function localMidnightEpoch(date: string, timezone: string) {
-  const [year, month, day] = date.split("-").map(Number);
-  const target = Date.UTC(year, month - 1, day);
-  let candidate = target;
-  const formatter = new Intl.DateTimeFormat("en-GB", {
-    timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
-  });
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const parts = Object.fromEntries(formatter.formatToParts(new Date(candidate)).map(part => [part.type, part.value]));
-    const represented = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day),
-      Number(parts.hour), Number(parts.minute), Number(parts.second));
-    const difference = target - represented;
-    candidate += difference;
-    if (difference === 0) break;
-  }
-  return Math.floor(candidate / 1000);
-}
-
-export async function showStaffLeaderboard(chatId: number) {
+export async function showStaffLeaderboard(chatId: number, messageId?: number) {
   const timezone = "Europe/Prague";
   const now = new Date();
   const today = datePartsInZone(now, timezone);
@@ -64,7 +45,6 @@ export async function showStaffLeaderboard(chatId: number) {
     const start = Number(shift.start_epoch);
     const end = Number(shift.end_epoch);
     if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
-    // Count the complete scheduled shift, even if it has not ended yet today.
     const durationHours = (end - start) / 3600;
     for (const rawId of shift.user_ids || []) {
       const userId = String(rawId);
@@ -98,5 +78,19 @@ export async function showStaffLeaderboard(chatId: number) {
     lines.push("", `👥 В рейтинге: ${ranking.length}`);
   }
 
-  await telegramApi("sendMessage", { chat_id: chatId, text: lines.join("\n"), parse_mode: "HTML" });
+  const payload = {
+    chat_id: chatId,
+    text: lines.join("\n"),
+    parse_mode: "HTML",
+    reply_markup: { inline_keyboard: [[{ text: "⬅️ Сотрудники", callback_data: "staff:home" }]] },
+  };
+  if (messageId) {
+    try {
+      await telegramApi("editMessageText", { ...payload, message_id: messageId });
+      return;
+    } catch (error) {
+      console.warn("Could not edit staff leaderboard message, sending replacement", error);
+    }
+  }
+  await telegramApi("sendMessage", payload);
 }
