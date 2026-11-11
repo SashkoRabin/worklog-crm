@@ -187,25 +187,35 @@ export async function showStaffAllForDate(chat: number, mode: string, messageId?
     const location = shift.location || "Локация не указана";
     grouped.set(location, [...(grouped.get(location) || []), shift]);
   }
-  const lines = ["🌐 <b>РАСПИСАНИЕ · ВСЕ ЛОКАЦИИ</b>", `📅 ${formatDate(date, "ru")}`, "━━━━━━━━━━━━━━━━━━", ""];
+  const lines = [
+    "🌐 <b>РАСПИСАНИЕ · ВСЕ ЛОКАЦИИ</b>",
+    `📅 <b>${formatDate(date, "ru")}</b>`,
+    "━━━━━━━━━━━━━━━━━━━━",
+    "",
+  ];
   let total = 0;
   for (const [location, locationShifts] of grouped) {
+    if (total > 0) lines.push("────────────────────", "");
     lines.push(`📍 <b>${escapeHtml(location)}</b>`);
+    lines.push("<i>────────────────</i>");
     const seen = new Set<string>();
     for (const shift of locationShifts) {
       const key = shift.connecteam_shift_id || `${shift.start_time}:${shift.end_time}:${(shift.user_ids || []).join(",")}`;
       if (seen.has(key)) continue;
       seen.add(key);
       const assigned = (shift.user_ids || []).map(String).map(id => names.get(id)).filter((name): name is string => Boolean(name));
-      lines.push(`🕒 <b>${escapeHtml(shift.start_time)}–${escapeHtml(shift.end_time)}</b>`);
-      if (assigned.length) for (const name of assigned) lines.push(`👤 ${escapeHtml(name)}`);
-      else lines.push("👥 Сотрудники не назначены");
+      lines.push(`🕒 <b>${escapeHtml(shift.start_time)} – ${escapeHtml(shift.end_time)}</b>`);
+      if (assigned.length) {
+        for (const name of assigned) lines.push(`   👤 ${escapeHtml(name)}`);
+      } else {
+        lines.push("   👥 <i>Сотрудники не назначены</i>");
+      }
+      lines.push("");
       total++;
     }
-    lines.push("");
   }
-  if (!shifts.length) lines.push("На эту дату смен не найдено.");
-  else lines.push("━━━━━━━━━━━━━━━━━━", `Всего смен: <b>${total}</b>`);
+  if (!shifts.length) lines.push("Смен на эту дату не найдено.");
+  else lines.push("━━━━━━━━━━━━━━━━━━━━", `📊 <b>Всего смен: ${total}</b>`);
   await renderStaffChunks(chat, messageId, lines, [
     [{ text: "🔄 Другая дата", callback_data: "staff:all:dates" }],
     [{ text: "⬅️ К локациям", callback_data: "staff:back:loc" }, { text: "🏠 В меню", callback_data: "staff:menu" }],
