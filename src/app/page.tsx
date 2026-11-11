@@ -284,13 +284,6 @@ export default function Home() {
         if (convertingConnecteam && editing.external_id) {
           await dismissConnecteamShift(user.id, editing.external_id);
         }
-        if (previousShift.shift_type !== "replacement" && row.shift_type === "replacement") {
-          void fetch("/api/telegram/shift-taken", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ shiftId: editing.id }),
-          }).catch((error) => console.error("Unable to request shift notification", error));
-        }
       }
     } else {
       const newShift = { ...row, id: crypto.randomUUID() };
@@ -303,13 +296,6 @@ export default function Home() {
           setShifts((all) => all.filter((item) => item.id !== newShift.id));
           console.error("Unable to create shift", error);
           return;
-        }
-        if (row.shift_type === "replacement") {
-          void fetch("/api/telegram/shift-taken", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ shiftId: newShift.id }),
-          }).catch((error) => console.error("Unable to request shift notification", error));
         }
       }
     }
