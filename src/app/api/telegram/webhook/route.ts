@@ -132,10 +132,16 @@ async function showSchedule(chatId: number, userId: number, lang: Lang, timezone
   const lines = [t.weekTitle.replace("{from}", from).replace("{to}", to), ""];
   for (const [date, items] of grouped) {
     lines.push(`<b>📍 ${formatDate(date, lang)}</b>`);
-    for (const shift of items) {
+    const sortedItems = [...items].sort((a, b) => {
+      const getStartMinutes = (name: string) => {
+        const match = name.match(/(\d{1,2}):(\d{2})\s*[–—-]\s*\d{1,2}:\d{2}/);
+        return match ? Number(match[1]) * 60 + Number(match[2]) : Number.MAX_SAFE_INTEGER;
+      };
+      return getStartMinutes(a.shift_name) - getStartMinutes(b.shift_name);
+    });
+    for (const shift of sortedItems) {
       const time = shift.shift_name.match(/\d{1,2}:\d{2}\s*[–—-]\s*\d{1,2}:\d{2}/)?.[0] || shift.shift_name;
-      const type = shift.shift_type === "assigned" ? (lang === "ru" ? " · план" : lang === "cs" ? " · plán" : " · planned") : "";
-      lines.push(`• <b>${escapeHtml(shift.store)}</b> · ${escapeHtml(time)}${type}`);
+      lines.push(`• <b>${escapeHtml(shift.store)}</b> · ${escapeHtml(time)}`);
     }
     lines.push("");
   }
