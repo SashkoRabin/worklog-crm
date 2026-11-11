@@ -23,7 +23,7 @@ const copy = {
     guideTitle: "📚 <b>WorkLog quick guide</b>",
     guide: "🗓 <b>Shifts & calendar</b>\nOpen the calendar to add or edit a shift. Select the date, workplace, shift type, actual hours and hourly rate. Planned shifts are shown separately from completed work.\n\n🔗 <b>Connecteam</b>\nIn WorkLog, open <b>Settings → Connecteam</b>. Paste your personal Calendar Sync link and select <b>Connect & sync</b>. Imported shifts appear in your schedule as planned shifts.\n\n💸 <b>Hours & earnings</b>\nCompleted hours multiplied by the saved hourly rate form your earned income. Upcoming shifts contribute to your potential hours and income.\n\n🔔 <b>Notifications</b>\nUse the Reminders button in this menu to turn shift notifications on or off. The notification time is configured in WorkLog → Telegram.",
     noShifts: "📅 <b>You have no shifts scheduled this week.</b>\n\nEnjoy your free time!",
-    weekTitle: "📅 <b>Your schedule · {from} – {to}</b>",
+    weekTitle: "📅 <b>Your schedule · {from} – {to}</b>", todayLabel: "TODAY", tomorrowLabel: "TOMORROW",
     hoursTitle: "💰 <b>Your hours & earnings</b>\n<i>{period}</i>",
     actual: "✅ Completed", potential: "📈 Potential (including planned)", hours: "h", currency: "CZK",
     menuHint: "Use the menu below to continue.",
@@ -40,7 +40,7 @@ const copy = {
     guideTitle: "📚 <b>Краткое руководство WorkLog</b>",
     guide: "🗓 <b>Смены и календарь</b>\nОткрой календарь, чтобы добавить или изменить смену. Выбери дату, рабочее место, тип смены, фактические часы и ставку. Запланированные смены отображаются отдельно от уже отработанных.\n\n🔗 <b>Подключение Connecteam</b>\nВ WorkLog открой <b>Настройки → Connecteam</b>. Вставь личную ссылку Calendar Sync и нажми <b>Подключить и синхронизировать</b>. Импортированные смены появятся в расписании как запланированные.\n\n💸 <b>Часы и заработок</b>\nФактический заработок рассчитывается по отработанным часам и ставке, сохранённой в смене. Будущие смены учитываются в потенциальных часах и заработке.\n\n🔔 <b>Уведомления</b>\nВключай и выключай уведомления кнопкой «Напоминания» в меню. Время уведомления настраивается на сайте в разделе WorkLog → Telegram.",
     noShifts: "📅 <b>У вас нет смен на этой неделе.</b>\n\nОтличная возможность отдохнуть и восстановить силы! 🌿",
-    weekTitle: "📅 <b>Ваше расписание · {from} – {to}</b>",
+    weekTitle: "📅 <b>Ваше расписание · {from} – {to}</b>", todayLabel: "СЕГОДНЯ", tomorrowLabel: "ЗАВТРА",
     hoursTitle: "💰 <b>Часы и заработок</b>\n<i>{period}</i>",
     actual: "✅ Фактически", potential: "📈 Потенциально (с учётом плановых смен)", hours: "ч", currency: "CZK",
     menuHint: "Используйте меню ниже для быстрого доступа.",
@@ -57,7 +57,7 @@ const copy = {
     guideTitle: "📚 <b>Rychlý návod WorkLog</b>",
     guide: "🗓 <b>Směny a kalendář</b>\nOtevři kalendář pro přidání nebo úpravu směny. Vyber datum, pracoviště, typ směny, skutečné hodiny a sazbu. Plánované směny jsou oddělené od dokončené práce.\n\n🔗 <b>Connecteam</b>\nVe WorkLog otevři <b>Nastavení → Connecteam</b>. Vlož osobní odkaz Calendar Sync a klikni na <b>Připojit a synchronizovat</b>. Importované směny se zobrazí jako plánované.\n\n💸 <b>Hodiny a výdělek</b>\nSkutečný výdělek se počítá z odpracovaných hodin a sazby uložené u směny. Budoucí směny se započítávají do potenciálních hodin a výdělku.\n\n🔔 <b>Upozornění</b>\nUpozornění zapneš nebo vypneš tlačítkem v nabídce. Čas upozornění nastavíš na webu v WorkLog → Telegram.",
     noShifts: "📅 <b>Tento týden nemáte žádné směny.</b>\n\nUžij si volný čas!",
-    weekTitle: "📅 <b>Tvůj rozvrh · {from} – {to}</b>",
+    weekTitle: "📅 <b>Tvůj rozvrh · {from} – {to}</b>", todayLabel: "DNES", tomorrowLabel: "ZÍTRA",
     hoursTitle: "💰 <b>Tvé hodiny a výdělek</b>\n<i>{period}</i>",
     actual: "✅ Skutečnost", potential: "📈 Potenciál (včetně plánovaných)", hours: "h", currency: "CZK",
     menuHint: "Pokračuj pomocí nabídky níže.",
@@ -130,8 +130,14 @@ async function showSchedule(chatId: number, userId: number, lang: Lang, timezone
   for (const shift of shifts) grouped.set(shift.work_date, [...(grouped.get(shift.work_date) || []), shift]);
   const from = formatDate(monday, lang), to = formatDate(sunday, lang);
   const lines = [t.weekTitle.replace("{from}", from).replace("{to}", to), ""];
+  const tomorrowString = addDays(todayString, 1);
   for (const [date, items] of grouped) {
-    lines.push(`<b>📍 ${formatDate(date, lang)}</b>`);
+    const dayMarker = date === todayString
+      ? ` · <b>${t.todayLabel}</b>`
+      : date === tomorrowString
+        ? ` · <b>${t.tomorrowLabel}</b>`
+        : "";
+    lines.push(`<b>📍 ${formatDate(date, lang)}${dayMarker}</b>`);
     const sortedItems = [...items].sort((a, b) => {
       const getStartMinutes = (name: string) => {
         const match = name.match(/(\d{1,2}):(\d{2})\s*[–—-]\s*\d{1,2}:\d{2}/);
