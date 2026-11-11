@@ -82,6 +82,7 @@ function menuKeyboard(lang: Lang, enabled: boolean) {
       [{ text: t.open, web_app: { url: appUrl() } }],
       [{ text: t.guideMenu }, { text: t.schedule }],
       [{ text: t.monthShifts }, { text: t.earnings }],
+      [{ text: "👥 Сотрудники" }],
       [{ text: enabled ? t.remindersOn : t.remindersOff }],
     ],
     resize_keyboard: true,
