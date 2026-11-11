@@ -75,7 +75,7 @@ export async function showStaffLeaderboard(chatId: number, messageId?: number) {
       const medal = ["🥇", "🥈", "🥉"][index] || `${index + 1}.`;
       lines.push(`${medal} <b>${escapeHtml(item.name)}</b> · <b>${number(item.hours)} ч</b>`);
     });
-    lines.push("", `👥 В рейтинге: ${ranking.length}`);
+    lines.push("", "━━━━━━━━━━━━━━━━━━", `👥 В рейтинге: ${ranking.length}`);
   }
 
   const payload = {
