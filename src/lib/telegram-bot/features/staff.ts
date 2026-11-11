@@ -45,7 +45,7 @@ async function renderStaffChunks(chat: number, messageId: number | undefined, li
   const chunks: string[] = [];
   let current = "";
   for (const line of lines) {
-    const candidate = current ? `${current}\\n${line}` : line;
+    const candidate = current ? `${current}\n${line}` : line;
     if (candidate.length > 3800 && current) {
       chunks.push(current);
       current = line;
@@ -157,12 +157,12 @@ export async function showStaffLocations(chat: number, messageId?: number) {
     rows[row].push({ text: name, callback_data: `staff:loc:${i}` });
   });
   await renderStaff(chat, messageId,
-    "📅 <b>РАСПИСАНИЕ СОТРУДНИКОВ</b>\\n<i>Сначала выбери точку, затем дату</i>\\n\\n📍 <b>Локация</b>",
+    "📅 <b>РАСПИСАНИЕ СОТРУДНИКОВ</b>\n<i>Сначала выбери точку, затем дату</i>\n\n📍 <b>Локация</b>",
     [...rows, [{ text: "🌐 Все локации", callback_data: "staff:all:dates" }], [{ text: "⬅️ Сотрудники", callback_data: "staff:home" }]]);
 }
 
 export async function showStaffAllDates(chat: number, messageId?: number) {
-  await renderStaff(chat, messageId, "🌐 <b>ВСЕ ЛОКАЦИИ</b>\\n\\nВыбери дату:", [
+  await renderStaff(chat, messageId, "🌐 <b>ВСЕ ЛОКАЦИИ</b>\n\nВыбери дату:", [
     [{ text: "Вчера", callback_data: "staff:all:date:y" }, { text: "Сегодня", callback_data: "staff:all:date:t" }, { text: "Завтра", callback_data: "staff:all:date:n" }],
     [{ text: "⬅️ К локациям", callback_data: "staff:back:loc" }, { text: "🏠 В меню", callback_data: "staff:menu" }],
   ]);
