@@ -467,7 +467,11 @@ export async function POST(request: Request) {
         else if (parts[1] === "back" && parts[2] === "loc") await showStaffLocations(chat, q.message?.message_id);
         else if (parts[1] === "back" && parts[2] === "dates") await showStaffDates(chat, Number(parts[3]), q.message?.message_id);
         else if (parts[1] === "menu") {
-          await telegramApi("editMessageText", { chat_id: chat, message_id: q.message?.message_id, text: "🏠 <b>Главное меню</b>\\n\\nИспользуй кнопки меню Telegram ниже.", parse_mode: "HTML", reply_markup: { inline_keyboard: [[{ text: "👥 Сотрудники", callback_data: "staff:back:loc" }]] } });
+          if (q.message?.message_id) {
+            try { await telegramApi("deleteMessage", { chat_id: chat, message_id: q.message.message_id }); }
+            catch (deleteError) { console.warn("Could not remove staff flow message", deleteError); }
+          }
+          await sendMenu(chat, lang, account.reminders_enabled, true);
         }
       } else if (q.data?.startsWith("lang:")) {
         const value = q.data.slice(5) as Lang;
