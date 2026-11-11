@@ -4,7 +4,7 @@ import { copy, type Account, type Lang, type Shift } from "../config";
 
 import { addDays, datePartsInZone, escapeHtml, formatDate, money } from "../utils";
 
-import { menuKeyboard } from "../menu";
+import { appUrl, menuKeyboard } from "../menu";
 
 export async function showSchedule(chatId: number, linkedUserId: string, lang: Lang, timezone: string) {
   const db = createAdminClient(), t = copy[lang], zone = timezone || "Europe/Prague";
