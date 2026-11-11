@@ -412,7 +412,14 @@ export async function POST(request: Request) {
       const lang = (account.language in copy ? account.language : "en") as Lang;
       if (q.data?.startsWith("staff:")) {
         if (q.from.id !== ADMIN_TELEGRAM_ID) { await telegramApi("answerCallbackQuery", { callback_query_id: q.id, text: "Недостаточно прав.", show_alert: true }); return NextResponse.json({ ok: true }); }
-        const parts = q.data.split(":"); await telegramApi("answerCallbackQuery", { callback_query_id: q.id });
+        const parts = q.data.split(":");
+        try {
+          await telegramApi("answerCallbackQuery", { callback_query_id: q.id });
+        } catch (callbackError) {
+          // Telegram callbacks expire quickly. A stale acknowledgement must not
+          // prevent handling the action or cause webhook retry storms.
+          console.warn("Telegram callback acknowledgement failed", callbackError);
+        }
         if (parts[1] === "loc") await showStaffDates(chat, Number(parts[2]));
         else if (parts[1] === "date") await showStaffForDate(chat, Number(parts[2]), parts[3]);
       } else if (q.data?.startsWith("lang:")) {
