@@ -16,3 +16,6 @@ create index if not exists telegram_broadcasts_created_idx
 
 alter table public.telegram_broadcasts enable row level security;
 -- No client policies: these tables are accessed only by trusted server routes.
+
+-- Remove the obsolete shift-taken notification table if an earlier migration was applied.
+drop table if exists public.telegram_shift_notifications;
