@@ -89,7 +89,7 @@ export async function handleTelegramWebhook(request: Request) {
           console.error("Need shifts toggle failed", needShiftsError);
           await telegramApi("sendMessage", {
             chat_id: chat,
-            text: "Не удалось обновить заявку на смены. Проверь миграцию telegram-need-shifts-migration.sql в Supabase и логи Vercel.",
+            text: "⚠️ Возникли технические неполадки. Не удалось обработать заявку на смены. Пожалуйста, обратитесь к администратору @onesandred.",
           });
         }
       } else if (msg.text === t.open) {
@@ -124,7 +124,7 @@ export async function handleTelegramWebhook(request: Request) {
           try {
             await telegramApi("answerCallbackQuery", {
               callback_query_id: q.id,
-              text: "Не удалось сохранить настройки смен. Проверь миграцию Supabase.",
+              text: "⚠️ Возникли технические неполадки. Не удалось сохранить настройки смен. Обратитесь к администратору @onesandred.",
               show_alert: true,
             });
           } catch (ackError) {
