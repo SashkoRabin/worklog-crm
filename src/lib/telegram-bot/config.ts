@@ -4,7 +4,8 @@ export type Account = { language: Lang; reminders_enabled: boolean; timezone?: s
 
 export type Shift = { id: string; work_date: string; store: string; shift_name: string; shift_type: "worked" | "replacement" | "assigned"; hours: number; hourly_rate: number; source: string };
 
-export type Update = { message?: { chat: { id: number; type?: string }; from?: { id: number; username?: string }; text?: string }; callback_query?: { id: string; from: { id: number; username?: string }; data?: string; message?: { message_id: number; chat: { id: number } } }; };
+export type TelegramUser = { id: number; is_bot?: boolean; first_name?: string; last_name?: string; username?: string };
+export type Update = { message?: { chat: { id: number; type?: string }; from?: TelegramUser; text?: string }; inline_query?: { id: string; from: TelegramUser; query: string }; callback_query?: { id: string; from: TelegramUser; data?: string; inline_message_id?: string; message?: { message_id: number; chat: { id: number } } }; };
 
 export const ADMIN_TELEGRAM_ID = 626335067;
 
