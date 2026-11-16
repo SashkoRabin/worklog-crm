@@ -22,7 +22,15 @@ export function menuKeyboard(lang: Lang, enabled: boolean, needsShifts = false) 
   };
 }
 export async function sendMenu(chatId: number, lang: Lang, enabled: boolean, welcome = false, telegramUserId?: number) {
-  const needsShifts = telegramUserId ? await hasNeedShifts(telegramUserId) : false;
+  let needsShifts = false;
+  if (telegramUserId) {
+    try {
+      needsShifts = await hasNeedShifts(telegramUserId);
+    } catch (error) {
+      // The optional "Need shifts" feature must never take down the main bot menu.
+      console.error("Could not read Need shifts state; showing default menu", error);
+    }
+  }
   await telegramApi("sendMessage", {
     chat_id: chatId,
     text: welcome ? copy[lang].welcome : copy[lang].menuHint,
