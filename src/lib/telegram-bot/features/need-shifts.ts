@@ -237,9 +237,28 @@ export async function handleNeedShiftsCallback(chatId: number, messageId: number
     return;
   }
   if (action === "date") {
-    const date = value === "any" ? null : value;
-    const { error } = await db.from("telegram_need_shifts").update({ request_date: date }).eq("telegram_user_id", userId).eq("week_start", currentWeekStart());
+    if (value === "any") {
+      const { error } = await db.from("telegram_need_shifts").update({
+        request_date: null, request_dates: [], whole_week: false,
+      }).eq("telegram_user_id", userId).eq("week_start", currentWeekStart());
+      if (error) throw error;
+      await renderWizard(chatId, messageId, userId, "time");
+      return;
+    }
+    const selected = (request.request_dates || (request.request_date ? [request.request_date] : [])) as string[];
+    const dates = selected.includes(value) ? selected.filter((date: string) => date !== value) : [...selected, value].sort();
+    const { error } = await db.from("telegram_need_shifts").update({
+      request_date: dates.length === 1 ? dates[0] : null, request_dates: dates, whole_week: false,
+    }).eq("telegram_user_id", userId).eq("week_start", currentWeekStart());
     if (error) throw error;
+    await renderWizard(chatId, messageId, userId, "date");
+  } else if (action === "week") {
+    const { error } = await db.from("telegram_need_shifts").update({
+      request_date: null, request_dates: [], whole_week: true,
+    }).eq("telegram_user_id", userId).eq("week_start", currentWeekStart());
+    if (error) throw error;
+    await renderWizard(chatId, messageId, userId, "time");
+  } else if (action === "dates") {
     await renderWizard(chatId, messageId, userId, "time");
   } else if (action === "time") {
     const time = TIMES.find(item => item.id === value);
