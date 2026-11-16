@@ -281,6 +281,10 @@ export async function handleNeedShiftsCallback(chatId: number, messageId: number
     if (error) throw error;
     await renderWizard(chatId, messageId, userId, "locations");
   } else if (action === "save") {
-    await telegramApi("editMessageText", { chat_id: chatId, message_id: messageId, text: "✅ <b>Пожелания сохранены.</b> Менеджер увидит их в списке ожидающих смену.", parse_mode: "HTML" });
+    // Save silently: the user already sees the selected values in the wizard.
+    // Remove the inline wizard message instead of sending a confirmation.
+    if (messageId) {
+      await telegramApi("deleteMessage", { chat_id: chatId, message_id: messageId });
+    }
   }
 }
