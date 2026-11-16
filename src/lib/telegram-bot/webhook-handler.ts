@@ -7,7 +7,7 @@ import { menuKeyboard, sendMenu } from "./menu";
 import { showStaffHome, showStaffScheduleHome, showStaffLocations, showStaffDates, showStaffForDate, showStaffAllDates, showStaffAllForDate, showStaffEmployees, showStaffEmployeeWeek } from "./features/staff";
 import { showSchedule, showMonthShifts, showEarnings, showGuide, showScheduleMenu, showUpcomingShifts, toggleReminders } from "./features/dashboard";
 import { showStaffLeaderboard } from "./features/staff-leaderboard";
-import { toggleNeedShifts, answerNeedShiftsInlineQuery, showWaitingShifts, refreshNeedShiftsInline } from "./features/need-shifts";
+import { toggleNeedShifts, answerNeedShiftsInlineQuery, showWaitingShifts, handleNeedShiftsCallback } from "./features/need-shifts";
 
 function matchSecret(received: string | null, expected: string) {
   if (!received) return false;
@@ -82,7 +82,7 @@ export async function handleTelegramWebhook(request: Request) {
         await telegramApi("sendMessage", { chat_id: chat, text: copy.en.choose, reply_markup: { inline_keyboard: [[{ text: "🇬🇧 English", callback_data: "lang:en" }, { text: "🇷🇺 Русский", callback_data: "lang:ru" }, { text: "🇨🇿 Čeština", callback_data: "lang:cs" }]] } });
       } else if (msg.text?.startsWith("/menu") || msg.text?.startsWith("/help")) {
         await sendMenu(chat, lang, account.reminders_enabled, true, id);
-      } else if (msg.text === "🆘 Нужны смены" || msg.text === "🆘 Need shifts" || msg.text === "🆘 Potřebuji směny") {
+      } else if (msg.text === "🆘 Нужны смены" || msg.text === "🆘 Нужны смены (отменить)" || msg.text === "🆘 Need shifts" || msg.text === "🆘 Need shifts (cancel)" || msg.text === "🆘 Potřebuji směny" || msg.text === "🆘 Potřebuji směny (zrušit)") {
         await toggleNeedShifts(chat, msg.from, lang, account.reminders_enabled);
       } else if (msg.text === t.open) {
         await sendMenu(chat, lang, account.reminders_enabled, false, id);
@@ -107,7 +107,7 @@ export async function handleTelegramWebhook(request: Request) {
       const q = update.callback_query, chat = q.message?.chat.id;
       if (q.data?.startsWith("needshifts:")) {
         await telegramApi("answerCallbackQuery", { callback_query_id: q.id });
-        if (q.data === "needshifts:refresh") await refreshNeedShiftsInline(q.inline_message_id, chat, q.message?.message_id);
+        if (q.message?.chat.id !== undefined) await handleNeedShiftsCallback(q.message.chat.id, q.message.message_id, q.from.id, q.data);
         return NextResponse.json({ ok: true });
       }
       if (chat === undefined) return NextResponse.json({ ok: true });
