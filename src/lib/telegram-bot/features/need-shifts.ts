@@ -25,6 +25,14 @@ function currentWeekStart() {
 function dateLabel(date: string) {
   return new Intl.DateTimeFormat("ru-RU", { timeZone: TIME_ZONE, weekday: "short", day: "numeric", month: "short" }).format(new Date(`${date}T12:00:00Z`));
 }
+function weekLabel() {
+  const start = currentWeekStart();
+  const end = addDays(start, 6);
+  const format = (date: string) => new Intl.DateTimeFormat("ru-RU", {
+    timeZone: TIME_ZONE, day: "2-digit", month: "2-digit",
+  }).format(new Date(`${date}T12:00:00Z`));
+  return `Неделя (${format(start)} - ${format(end)})`;
+}
 
 type WaitingUser = {
   telegram_user_id: number; first_name: string; last_name: string | null; username: string | null;
@@ -168,7 +176,7 @@ export async function toggleNeedShifts(chatId: number, from: TelegramUser | unde
   await telegramApi("sendMessage", { chat_id: chatId, text: "Укажи предпочтения по дополнительным сменам:", reply_markup: { inline_keyboard: [[{ text: "⚙️ Указать пожелания", callback_data: "needshifts:step:date" }]] } });
 }
 function buildWaitingMessage(users: WaitingUser[]) {
-  const lines = ["🆘 <b>СОТРУДНИКИ, КОТОРЫМ НУЖНЫ СМЕНЫ</b>", `📅 Неделя с ${currentWeekStart()}`, ""];
+  const lines = ["🆘 <b>СОТРУДНИКИ, КОТОРЫМ НУЖНЫ СМЕНЫ</b>", `📅 ${weekLabel()}`, ""];
   if (!users.length) lines.push("Пока никто не ожидает дополнительные смены.");
   else { users.forEach((user, index) => lines.push(formatUser(user, index), "")); lines.push(`👥 Всего сотрудников: <b>${users.length}</b>`); }
   return lines.join("\n").slice(0, 3900);
