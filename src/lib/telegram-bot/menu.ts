@@ -11,6 +11,7 @@ export function menuKeyboard(lang: Lang, enabled: boolean) {
       [{ text: t.open, web_app: { url: appUrl() } }],
       [{ text: t.guideMenu }, { text: t.scheduleMenu }],
       [{ text: t.earnings }],
+      [{ text: lang === "ru" ? "🆘 Нужны смены" : lang === "cs" ? "🆘 Potřebuji směny" : "🆘 Need shifts" }],
       [{ text: "👥 Сотрудники" }],
       [{ text: enabled ? t.remindersOn : t.remindersOff }],
     ],
