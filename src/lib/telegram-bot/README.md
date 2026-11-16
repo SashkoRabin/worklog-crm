@@ -11,6 +11,7 @@ The Telegram bot is an isolated application layer inside the Next.js repository.
 - `src/lib/telegram-bot/utils.ts`: pure formatting/date/escaping helpers.
 - `src/lib/telegram-bot/features/`: feature-specific bot workflows.
   - `staff.ts`: staff hub, location schedule, employee selector and weekly employee schedule.\n  - `staff-leaderboard.ts`: monthly employee hours leaderboard.
+  - `need-shifts.ts`: weekly requests for additional shifts, preference wizard, and inline-query results.
   - `dashboard.ts`: personal schedule, monthly shifts, earnings, guide and reminders.
 
 ## Rules for future changes
@@ -21,7 +22,8 @@ The Telegram bot is an isolated application layer inside the Next.js repository.
 4. Share only neutral server infrastructure (for example `createAdminClient`) between the bot and the website. Do not put UI/business workflow in shared modules.
 5. Keep bot database access inside its feature module. If a workflow becomes shared with the website, extract a neutral domain service into `src/lib/<domain>` and let both sides call it.
 6. Keep Telegram callback payloads short and version them if a workflow needs persistent multi-step state.
-7. When adding a feature, update this document and verify the webhook route, existing bot commands, and website build independently.
+7. Inline mode must be enabled for the bot in @BotFather (`/setinline`). The webhook handles inline queries and returns a fresh, uncached weekly waiting list.
+8. When adding a feature, update this document and verify the webhook route, existing bot commands, and website build independently.
 
 ## Data ownership
 
