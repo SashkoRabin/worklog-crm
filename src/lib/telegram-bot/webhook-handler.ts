@@ -75,17 +75,17 @@ export async function handleTelegramWebhook(request: Request) {
             const { error: linkError } = await db.from("telegram_accounts").update({ linked_user_id: link.user_id, linked_at: new Date().toISOString(), reminders_enabled: true, reminder_minutes: 120 }).eq("telegram_user_id", id);
             if (linkError) throw linkError;
             await telegramApi("sendMessage", { chat_id: chat, text: t.linked, parse_mode: "HTML" });
-            await sendMenu(chat, lang, true, true);
+            await sendMenu(chat, lang, true, true, id);
           }
         }
       } else if (msg.text?.startsWith("/start")) {
         await telegramApi("sendMessage", { chat_id: chat, text: copy.en.choose, reply_markup: { inline_keyboard: [[{ text: "🇬🇧 English", callback_data: "lang:en" }, { text: "🇷🇺 Русский", callback_data: "lang:ru" }, { text: "🇨🇿 Čeština", callback_data: "lang:cs" }]] } });
       } else if (msg.text?.startsWith("/menu") || msg.text?.startsWith("/help")) {
-        await sendMenu(chat, lang, account.reminders_enabled, true);
+        await sendMenu(chat, lang, account.reminders_enabled, true, id);
       } else if (msg.text === "🆘 Нужны смены" || msg.text === "🆘 Need shifts" || msg.text === "🆘 Potřebuji směny") {
-        await toggleNeedShifts(chat, msg.from, false);
+        await toggleNeedShifts(chat, msg.from, lang, account.reminders_enabled);
       } else if (msg.text === t.open) {
-        await telegramApi("sendMessage", { chat_id: chat, text: t.menuHint, reply_markup: menuKeyboard(lang, account.reminders_enabled) });
+        await sendMenu(chat, lang, account.reminders_enabled, false, id);
       } else if (msg.text === t.guideMenu) {
         await showGuide(chat, lang);
       } else if (msg.text === t.scheduleMenu || msg.text === t.schedule) {
@@ -105,6 +105,11 @@ export async function handleTelegramWebhook(request: Request) {
     }
     if (update.callback_query) {
       const q = update.callback_query, chat = q.message?.chat.id;
+      if (q.data?.startsWith("needshifts:")) {
+        await telegramApi("answerCallbackQuery", { callback_query_id: q.id });
+        if (q.data === "needshifts:refresh") await refreshNeedShiftsInline(q.inline_message_id, chat, q.message?.message_id);
+        return NextResponse.json({ ok: true });
+      }
       if (chat === undefined) return NextResponse.json({ ok: true });
       if (q.data?.startsWith("broadcast:")) {
         if (q.from.id !== ADMIN_TELEGRAM_ID) {
@@ -211,7 +216,7 @@ export async function handleTelegramWebhook(request: Request) {
             try { await telegramApi("deleteMessage", { chat_id: chat, message_id: q.message.message_id }); }
             catch (deleteError) { console.warn("Could not remove staff flow message", deleteError); }
           }
-          await sendMenu(chat, lang, account.reminders_enabled, true);
+          await sendMenu(chat, lang, account.reminders_enabled, true, q.from.id);
         }
       } else if (q.data?.startsWith("lang:")) {
         const value = q.data.slice(5) as Lang;
@@ -219,7 +224,7 @@ export async function handleTelegramWebhook(request: Request) {
           const { error: languageError } = await db.from("telegram_accounts").update({ language: value }).eq("telegram_user_id", q.from.id);
           if (languageError) throw languageError;
           await telegramApi("answerCallbackQuery", { callback_query_id: q.id });
-          await sendMenu(chat, value, account.reminders_enabled, true);
+          await sendMenu(chat, value, account.reminders_enabled, true, q.from.id);
         }
       } else if (q.data === "language:choose") {
         await telegramApi("answerCallbackQuery", { callback_query_id: q.id });
