@@ -171,18 +171,29 @@ export async function showWaitingShifts(chatId: number, messageId?: number) {
 export async function answerNeedShiftsInlineQuery(query: { id: string; from: TelegramUser; query: string }) {
   const normalized = query.query.trim().toLocaleLowerCase();
   const supported = ["смены", "смен", "shifts", "shift", "замены", "замена"];
-  if (normalized && !supported.some(term => normalized.includes(term))) {
+  if (normalized && !supported.some(term => term.includes(normalized) || normalized.includes(term))) {
     await telegramApi("answerInlineQuery", { inline_query_id: query.id, results: [], cache_time: 0, is_personal: true });
     return;
   }
-  const users = await getWaitingUsers(), text = buildWaitingMessage(users);
-  await telegramApi("answerInlineQuery", {
-    inline_query_id: query.id, cache_time: 0, is_personal: true,
-    results: [{ type: "article", id: `need-shifts-${currentWeekStart()}`,
-      title: users.length ? `🆘 Ждут смену: ${users.length}` : "🆘 Пока никто не ждёт смену",
-      description: "Актуальный список сотрудников с пожеланиями по сменам",
-      input_message_content: { message_text: text, parse_mode: "HTML" } }],
-  });
+  try {
+    const users = await getWaitingUsers(), message = buildWaitingMessage(users);
+    await telegramApi("answerInlineQuery", {
+      inline_query_id: query.id, cache_time: 0, is_personal: true,
+      results: [{ type: "article", id: `need-shifts-${currentWeekStart()}`,
+        title: users.length ? `🆘 Ждут смену: ${users.length}` : "🆘 Пока никто не ждёт смену",
+        description: "Актуальный список сотрудников с пожеланиями по сменам",
+        input_message_content: { message_text: message, parse_mode: "HTML" } }],
+    });
+  } catch (error) {
+    console.error("Need shifts inline query failed", error);
+    await telegramApi("answerInlineQuery", {
+      inline_query_id: query.id, cache_time: 0, is_personal: true,
+      results: [{ type: "article", id: "need-shifts-setup-error",
+        title: "⚠️ Список смен временно недоступен",
+        description: "Проверь миграцию telegram_need_shifts в Supabase",
+        input_message_content: { message_text: "⚠️ Список ожидающих смену временно недоступен. Проверь, что миграция supabase/telegram-need-shifts-migration.sql выполнена в Supabase." } }],
+    });
+  }
 }
 export async function handleNeedShiftsCallback(chatId: number, messageId: number | undefined, userId: number, data: string) {
   const db = createAdminClient(), request = await getRequest(userId);
