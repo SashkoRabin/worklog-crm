@@ -7,6 +7,7 @@ import { menuKeyboard, sendMenu } from "./menu";
 import { showStaffHome, showStaffScheduleHome, showStaffLocations, showStaffDates, showStaffForDate, showStaffAllDates, showStaffAllForDate, showStaffEmployees, showStaffEmployeeWeek } from "./features/staff";
 import { showSchedule, showMonthShifts, showEarnings, showGuide, showScheduleMenu, showUpcomingShifts, toggleReminders } from "./features/dashboard";
 import { showStaffLeaderboard } from "./features/staff-leaderboard";
+import { toggleNeedShifts, answerNeedShiftsInlineQuery, showWaitingShifts, refreshNeedShiftsInline } from "./features/need-shifts";
 
 function matchSecret(received: string | null, expected: string) {
   if (!received) return false;
@@ -20,6 +21,10 @@ export async function handleTelegramWebhook(request: Request) {
   if (!matchSecret(request.headers.get("x-telegram-bot-api-secret-token"), secret)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const update = await request.json() as Update, db = createAdminClient(), msg = update.message;
+    if (update.inline_query) {
+      await answerNeedShiftsInlineQuery(update.inline_query);
+      return NextResponse.json({ ok: true });
+    }
     if (msg?.from && msg.chat.type !== "group" && msg.chat.type !== "supergroup") {
       const id = msg.from.id, chat = msg.chat.id;
       await db.from("telegram_accounts").upsert({ telegram_user_id: id, chat_id: chat }, { onConflict: "telegram_user_id", ignoreDuplicates: true });
@@ -77,6 +82,8 @@ export async function handleTelegramWebhook(request: Request) {
         await telegramApi("sendMessage", { chat_id: chat, text: copy.en.choose, reply_markup: { inline_keyboard: [[{ text: "🇬🇧 English", callback_data: "lang:en" }, { text: "🇷🇺 Русский", callback_data: "lang:ru" }, { text: "🇨🇿 Čeština", callback_data: "lang:cs" }]] } });
       } else if (msg.text?.startsWith("/menu") || msg.text?.startsWith("/help")) {
         await sendMenu(chat, lang, account.reminders_enabled, true);
+      } else if (msg.text === "🆘 Нужны смены" || msg.text === "🆘 Need shifts" || msg.text === "🆘 Potřebuji směny") {
+        await toggleNeedShifts(chat, msg.from, false);
       } else if (msg.text === t.open) {
         await telegramApi("sendMessage", { chat_id: chat, text: t.menuHint, reply_markup: menuKeyboard(lang, account.reminders_enabled) });
       } else if (msg.text === t.guideMenu) {
@@ -195,6 +202,7 @@ export async function handleTelegramWebhook(request: Request) {
         else if (parts[1] === "back" && parts[2] === "loc") await showStaffLocations(chat, q.message?.message_id);
         else if (parts[1] === "back" && parts[2] === "dates") await showStaffDates(chat, Number(parts[3]), q.message?.message_id);
         else if (parts[1] === "leaderboard") await showStaffLeaderboard(chat, q.message?.message_id);
+        else if (parts[1] === "waiting") await showWaitingShifts(chat, q.message?.message_id);
         else if (parts[1] === "employees") await showStaffEmployees(chat, Number(parts[2] || 0), q.message?.message_id);
         else if (parts[1] === "person") await showStaffEmployeeWeek(chat, parts[2] || "", Number(parts[3] || 0), q.message?.message_id);
         else if (parts[1] === "noop") { /* Pagination indicator only. */ }
