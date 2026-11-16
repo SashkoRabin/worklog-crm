@@ -5,6 +5,7 @@ import { copy, type Account, type Lang, type Shift } from "../config";
 import { addDays, datePartsInZone, escapeHtml, formatDate, money } from "../utils";
 
 import { appUrl, menuKeyboard } from "../menu";
+import { hasNeedShifts } from "./need-shifts";
 
 
 export async function showScheduleMenu(chatId: number, lang: Lang) {
@@ -187,5 +188,5 @@ export async function toggleReminders(chatId: number, userId: number, account: A
   const enabled = !account.reminders_enabled, db = createAdminClient();
   const { error } = await db.from("telegram_accounts").update({ reminders_enabled: enabled }).eq("telegram_user_id", userId);
   if (error) throw error;
-  await telegramApi("sendMessage", { chat_id: chatId, text: enabled ? copy[account.language].enabled : copy[account.language].disabled, parse_mode: "HTML", reply_markup: menuKeyboard(account.language, enabled) });
+  await telegramApi("sendMessage", { chat_id: chatId, text: enabled ? copy[account.language].enabled : copy[account.language].disabled, parse_mode: "HTML", reply_markup: menuKeyboard(account.language, enabled, await hasNeedShifts(userId)) });
 }
