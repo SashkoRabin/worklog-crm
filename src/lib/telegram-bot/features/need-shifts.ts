@@ -1,6 +1,7 @@
 import { createAdminClient, telegramApi } from "@/lib/telegram-server";
 import { escapeHtml } from "../utils";
-import type { TelegramUser } from "../config";
+import type { TelegramUser, Lang } from "../config";
+import { menuKeyboard } from "../menu";
 
 const TIME_ZONE = "Europe/Prague";
 
@@ -36,6 +37,13 @@ function formatUser(user: WaitingUser, index?: number) {
   return `<a href="${profileLink(user)}">${escapeHtml(label)}</a>${username}`;
 }
 
+export async function hasNeedShifts(userId: number): Promise<boolean> {
+  const db = createAdminClient();
+  const { data, error } = await db.from("telegram_need_shifts").select("telegram_user_id").eq("telegram_user_id", userId).eq("week_start", currentWeekStart()).maybeSingle();
+  if (error) throw error;
+  return Boolean(data);
+}
+
 async function getWaitingUsers(): Promise<WaitingUser[]> {
   const db = createAdminClient();
   const { data, error } = await db.from("telegram_need_shifts")
@@ -46,7 +54,7 @@ async function getWaitingUsers(): Promise<WaitingUser[]> {
   return (data || []) as WaitingUser[];
 }
 
-export async function toggleNeedShifts(chatId: number, from?: TelegramUser, inline = false) {
+export async function toggleNeedShifts(chatId: number, from: TelegramUser | undefined, lang: Lang, remindersEnabled: boolean) {
   if (!from) return;
   const db = createAdminClient();
   const weekStart = currentWeekStart();
@@ -64,7 +72,7 @@ export async function toggleNeedShifts(chatId: number, from?: TelegramUser, inli
     await telegramApi("sendMessage", {
       chat_id: chatId,
       text: "✅ Заявка отменена. Ты удалён из списка ожидающих смену.",
-      reply_markup: inline ? undefined : undefined,
+      reply_markup: menuKeyboard(lang, remindersEnabled, false),
     });
     return;
   }
@@ -83,6 +91,7 @@ export async function toggleNeedShifts(chatId: number, from?: TelegramUser, inli
     chat_id: chatId,
     text: "🆘 <b>Ты добавлен в список ожидающих смену!</b>\n\nКогда появятся дополнительные смены, менеджер сможет найти твой профиль прямо из списка.\n\nНажми кнопку «Нужны смены» ещё раз, чтобы отменить заявку.",
     parse_mode: "HTML",
+    reply_markup: menuKeyboard(lang, remindersEnabled, true),
   });
 }
 
