@@ -57,7 +57,7 @@ export async function hasNeedShifts(userId: number): Promise<boolean> {
 async function getWaitingUsers(): Promise<WaitingUser[]> {
   const db = createAdminClient();
   const { data, error } = await db.from("telegram_need_shifts")
-    .select("telegram_user_id,first_name,last_name,username,created_at,request_date,time_from,time_to,location_mode,locations")
+    .select("telegram_user_id,first_name,last_name,username,created_at,request_date,request_dates,whole_week,time_from,time_to,location_mode,locations")
     .eq("week_start", currentWeekStart()).order("created_at", { ascending: true });
   if (error) throw error;
   return (data || []) as WaitingUser[];
