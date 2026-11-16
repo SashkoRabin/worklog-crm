@@ -6,10 +6,9 @@ import { menuKeyboard } from "../menu";
 const TIME_ZONE = "Europe/Prague";
 const LOCATIONS = ["Karlovy Lázně", "Revoluční", "Národní", "Opletalova", "Kaprova", "Karlák", "Karlova", "Karlín"];
 const TIMES = [
-  { id: "any", label: "Без ограничений", from: null, to: null },
-  { id: "morning", label: "Утро · 08:00–14:00", from: "08:00", to: "14:00" },
-  { id: "day", label: "День · 12:00–18:00", from: "12:00", to: "18:00" },
-  { id: "evening", label: "Вечер · 16:00–23:00", from: "16:00", to: "23:00" },
+  { id: "morning", label: "🌅 Утро · 08:00–14:00", from: "08:00", to: "14:00" },
+  { id: "evening", label: "🌆 Вечер · 16:00–23:00", from: "16:00", to: "23:00" },
+  { id: "full_day", label: "☀️ Весь день · 08:00–23:00", from: "08:00", to: "23:00" },
 ];
 
 function todayInPrague() {
