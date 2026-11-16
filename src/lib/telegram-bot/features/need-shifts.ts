@@ -39,7 +39,13 @@ function formatUser(user: WaitingUser, index?: number) {
   const label = index === undefined ? name : `${index + 1}. ${name}`;
   const username = user.username ? ` · @${escapeHtml(user.username)}` : "";
   const dates = user.whole_week ? "Вся неделя" : (user.request_dates?.length ? user.request_dates.map(dateLabel).join(", ") : user.request_date ? dateLabel(user.request_date) : "Любая дата");
-  const time = user.time_from && user.time_to ? `${user.time_from}–${user.time_to}` : "Любое время";
+  const time = user.time_from === "08:00" && user.time_to === "14:00"
+    ? "Утро"
+    : user.time_from === "16:00" && user.time_to === "23:00"
+      ? "Вечер"
+      : user.time_from === "08:00" && user.time_to === "23:00"
+        ? "Весь день"
+        : "Любое время";
   const locations = user.location_mode === "include"
     ? `Точки: ${(user.locations || []).map(escapeHtml).join(", ") || "не выбраны"}`
     : user.location_mode === "exclude"
@@ -112,7 +118,13 @@ async function renderWizard(chatId: number, messageId: number | undefined, userI
     rows.push([{ text: "Готово", callback_data: "needshifts:step:summary" }]);
   } else {
     const dateText = wholeWeek ? "Вся неделя" : dates.length ? dates.map(dateLabel).join(", ") : "Любая дата";
-    const timeText = timeFrom && timeTo ? `${timeFrom}–${timeTo}` : "Любое время";
+    const timeText = timeFrom === "08:00" && timeTo === "14:00"
+      ? "Утро"
+      : timeFrom === "16:00" && timeTo === "23:00"
+        ? "Вечер"
+        : timeFrom === "08:00" && timeTo === "23:00"
+          ? "Весь день"
+          : "Любое время";
     const locationText = mode === "any" ? "Все точки" : `${mode === "include" ? "Только" : "Кроме"}: ${selected.join(", ") || "не выбраны"}`;
     title += `Проверь пожелания:\n📅 ${escapeHtml(dateText)}\n🕒 ${escapeHtml(timeText)}\n📍 ${escapeHtml(locationText)}`;
     rows = [
