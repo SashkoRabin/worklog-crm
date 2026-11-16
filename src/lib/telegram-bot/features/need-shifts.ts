@@ -175,23 +175,56 @@ export async function answerNeedShiftsInlineQuery(query: { id: string; from: Tel
     await telegramApi("answerInlineQuery", { inline_query_id: query.id, results: [], cache_time: 0, is_personal: true });
     return;
   }
+
   try {
-    const users = await getWaitingUsers(), message = buildWaitingMessage(users);
+    const users = await getWaitingUsers();
+    const message = users.length
+      ? buildWaitingMessage(users)
+      : "Никто не ищет замену сейчас.";
+
     await telegramApi("answerInlineQuery", {
-      inline_query_id: query.id, cache_time: 0, is_personal: true,
-      results: [{ type: "article", id: `need-shifts-${currentWeekStart()}`,
-        title: users.length ? `🆘 Ждут смену: ${users.length}` : "🆘 Пока никто не ждёт смену",
-        description: "Актуальный список сотрудников с пожеланиями по сменам",
-        input_message_content: { message_text: message, parse_mode: "HTML" } }],
+      inline_query_id: query.id,
+      cache_time: 0,
+      is_personal: true,
+      results: [{
+        type: "article",
+        id: `need-shifts-${currentWeekStart()}`,
+        title: users.length ? `🆘 Ждут смену: ${users.length}` : "Никто не ищет замену сейчас.",
+        description: users.length ? "Актуальный список сотрудников с пожеланиями по сменам" : "Список ожидающих смену сейчас пуст",
+        input_message_content: { message_text: message, parse_mode: users.length ? "HTML" : undefined },
+      }],
     });
   } catch (error) {
-    console.error("Need shifts inline query failed", error);
+    const dbError = error as { code?: string; message?: string; details?: string; hint?: string };
+    console.error("Need shifts inline query failed", {
+      code: dbError.code,
+      message: dbError.message,
+      details: dbError.details,
+      hint: dbError.hint,
+    });
+
+    let reason = "Не удалось получить данные из базы Supabase.";
+    if (dbError.code === "42P01" || /relation .* does not exist/i.test(dbError.message || "")) {
+      reason = "Таблица telegram_need_shifts не найдена. Выполни миграцию supabase/telegram-need-shifts-migration.sql в Supabase.";
+    } else if (dbError.code === "42703" || /column .* does not exist/i.test(dbError.message || "")) {
+      reason = "В таблице telegram_need_shifts не хватает новых колонок. Повторно выполни актуальную миграцию supabase/telegram-need-shifts-migration.sql.";
+    } else if (dbError.code === "PGRST200" || dbError.code === "PGRST204" || dbError.code === "PGRST205") {
+      reason = "Supabase не видит актуальную структуру таблицы telegram_need_shifts. Проверь миграцию и обновление schema cache.";
+    } else if (dbError.message) {
+      reason = `Ошибка Supabase: ${dbError.message.slice(0, 240)}`;
+    }
+
     await telegramApi("answerInlineQuery", {
-      inline_query_id: query.id, cache_time: 0, is_personal: true,
-      results: [{ type: "article", id: "need-shifts-setup-error",
-        title: "⚠️ Список смен временно недоступен",
-        description: "Проверь миграцию telegram_need_shifts в Supabase",
-        input_message_content: { message_text: "⚠️ Список ожидающих смену временно недоступен. Проверь, что миграция supabase/telegram-need-shifts-migration.sql выполнена в Supabase." } }],
+      inline_query_id: query.id,
+      cache_time: 0,
+      is_personal: true,
+      results: [{
+        type: "article",
+        id: "need-shifts-query-error",
+        title: "⚠️ Не удалось загрузить список замен",
+        description: reason.slice(0, 240),
+        input_message_content: { message_text: `⚠️ Не удалось загрузить список замен.\n\n${reason}` },
+      }],
     });
   }
 }
