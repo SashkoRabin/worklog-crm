@@ -83,7 +83,15 @@ export async function handleTelegramWebhook(request: Request) {
       } else if (msg.text?.startsWith("/menu") || msg.text?.startsWith("/help")) {
         await sendMenu(chat, lang, account.reminders_enabled, true, id);
       } else if (msg.text === "🆘 Нужны смены" || msg.text === "🆘 Нужны смены (отменить)" || msg.text === "🆘 Need shifts" || msg.text === "🆘 Need shifts (cancel)" || msg.text === "🆘 Potřebuji směny" || msg.text === "🆘 Potřebuji směny (zrušit)") {
-        await toggleNeedShifts(chat, msg.from, lang, account.reminders_enabled);
+        try {
+          await toggleNeedShifts(chat, msg.from, lang, account.reminders_enabled);
+        } catch (needShiftsError) {
+          console.error("Need shifts toggle failed", needShiftsError);
+          await telegramApi("sendMessage", {
+            chat_id: chat,
+            text: "Не удалось обновить заявку на смены. Проверь миграцию telegram-need-shifts-migration.sql в Supabase и логи Vercel.",
+          });
+        }
       } else if (msg.text === t.open) {
         await sendMenu(chat, lang, account.reminders_enabled, false, id);
       } else if (msg.text === t.guideMenu) {
@@ -106,8 +114,23 @@ export async function handleTelegramWebhook(request: Request) {
     if (update.callback_query) {
       const q = update.callback_query, chat = q.message?.chat.id;
       if (q.data?.startsWith("needshifts:")) {
-        await telegramApi("answerCallbackQuery", { callback_query_id: q.id });
-        if (q.message?.chat.id !== undefined) await handleNeedShiftsCallback(q.message.chat.id, q.message.message_id, q.from.id, q.data);
+        try {
+          await telegramApi("answerCallbackQuery", { callback_query_id: q.id });
+          if (q.message?.chat.id !== undefined) {
+            await handleNeedShiftsCallback(q.message.chat.id, q.message.message_id, q.from.id, q.data);
+          }
+        } catch (needShiftsError) {
+          console.error("Need shifts callback failed", needShiftsError);
+          try {
+            await telegramApi("answerCallbackQuery", {
+              callback_query_id: q.id,
+              text: "Не удалось сохранить настройки смен. Проверь миграцию Supabase.",
+              show_alert: true,
+            });
+          } catch (ackError) {
+            console.warn("Could not report Need shifts callback error", ackError);
+          }
+        }
         return NextResponse.json({ ok: true });
       }
       if (chat === undefined) return NextResponse.json({ ok: true });
