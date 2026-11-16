@@ -63,6 +63,7 @@ export async function showStaffHome(chat: number, messageId?: number) {
     [{ text: "📅 Расписание", callback_data: "staff:schedule" }],
     [{ text: "🏆 Топ сотрудников", callback_data: "staff:leaderboard" }],
     [{ text: "🗓 График сотрудника", callback_data: "staff:employees" }],
+    [{ text: "⏳ Ждут смену", callback_data: "staff:waiting" }],
     [{ text: "🏠 В главное меню", callback_data: "staff:menu" }],
   ]);
 }
