@@ -29,7 +29,7 @@ function dateLabel(date: string) {
 
 type WaitingUser = {
   telegram_user_id: number; first_name: string; last_name: string | null; username: string | null;
-  created_at: string; request_date?: string | null; time_from?: string | null; time_to?: string | null;
+  created_at: string; request_date?: string | null; request_dates?: string[] | null; whole_week?: boolean | null; time_from?: string | null; time_to?: string | null;
   location_mode?: "any" | "include" | "exclude" | null; locations?: string[] | null;
 };
 function profileLink(user: WaitingUser) {
@@ -39,14 +39,14 @@ function formatUser(user: WaitingUser, index?: number) {
   const name = [user.first_name, user.last_name].filter(Boolean).join(" ").trim() || "Без имени";
   const label = index === undefined ? name : `${index + 1}. ${name}`;
   const username = user.username ? ` · @${escapeHtml(user.username)}` : "";
-  const date = user.request_date ? dateLabel(user.request_date) : "Любая дата";
+  const dates = user.whole_week ? "Вся неделя" : (user.request_dates?.length ? user.request_dates.map(dateLabel).join(", ") : user.request_date ? dateLabel(user.request_date) : "Любая дата");
   const time = user.time_from && user.time_to ? `${user.time_from}–${user.time_to}` : "Любое время";
   const locations = user.location_mode === "include"
     ? `Точки: ${(user.locations || []).map(escapeHtml).join(", ") || "не выбраны"}`
     : user.location_mode === "exclude"
       ? `Кроме точек: ${(user.locations || []).map(escapeHtml).join(", ") || "нет"}`
       : "Все точки";
-  return `<a href="${profileLink(user)}">${escapeHtml(label)}</a>${username}\n   📅 ${escapeHtml(date)} · 🕒 ${escapeHtml(time)}\n   📍 ${locations}`;
+  return `<a href="${profileLink(user)}">${escapeHtml(label)}</a>${username}\n   📅 ${escapeHtml(dates)} · 🕒 ${escapeHtml(time)}\n   📍 ${locations}`;
 }
 export async function hasNeedShifts(userId: number): Promise<boolean> {
   const db = createAdminClient();
@@ -73,21 +73,25 @@ async function renderWizard(chatId: number, messageId: number | undefined, userI
   const request = await getRequest(userId);
   if (!request) return;
   const date = request.request_date as string | null;
+  const dates = (request.request_dates || (date ? [date] : [])) as string[];
+  const wholeWeek = Boolean(request.whole_week);
   const timeFrom = request.time_from as string | null, timeTo = request.time_to as string | null;
   const mode = (request.location_mode || "any") as "any" | "include" | "exclude";
   const selected = (request.locations || []) as string[];
   let title = "🛠 <b>ПОЖЕЛАНИЯ ПО СМЕНАМ</b>\n\n";
   let rows: { text: string; callback_data: string }[][] = [];
   if (step === "date") {
-    title += "На какую дату нужна смена?";
+    title += "Выбери одну или несколько дат. Повторное нажатие снимает выбор:";
     const today = todayInPrague();
     for (let i = 0; i < 14; i += 2) {
       rows.push([0, 1].map(offset => {
         const d = addDays(today, i + offset);
-        return { text: dateLabel(d), callback_data: `needshifts:date:${d}` };
+        return { text: `${dates.includes(d) && !wholeWeek ? "✅ " : ""}${dateLabel(d)}`, callback_data: `needshifts:date:${d}` };
       }));
     }
+    rows.push([{ text: wholeWeek ? "✅ Вся неделя" : "📅 Вся неделя", callback_data: "needshifts:week" }]);
     rows.push([{ text: "Любая дата", callback_data: "needshifts:date:any" }]);
+    rows.push([{ text: "Готово", callback_data: "needshifts:dates:done" }]);
   } else if (step === "time") {
     title += "В какое время удобно?";
     rows = TIMES.map(t => [{ text: (timeFrom === t.from && timeTo === t.to) ? `✓ ${t.label}` : t.label, callback_data: `needshifts:time:${t.id}` }]);
@@ -108,7 +112,7 @@ async function renderWizard(chatId: number, messageId: number | undefined, userI
     }
     rows.push([{ text: "Готово", callback_data: "needshifts:step:summary" }]);
   } else {
-    const dateText = date ? dateLabel(date) : "Любая дата";
+    const dateText = wholeWeek ? "Вся неделя" : dates.length ? dates.map(dateLabel).join(", ") : "Любая дата";
     const timeText = timeFrom && timeTo ? `${timeFrom}–${timeTo}` : "Любое время";
     const locationText = mode === "any" ? "Все точки" : `${mode === "include" ? "Только" : "Кроме"}: ${selected.join(", ") || "не выбраны"}`;
     title += `Проверь пожелания:\n📅 ${escapeHtml(dateText)}\n🕒 ${escapeHtml(timeText)}\n📍 ${escapeHtml(locationText)}`;
@@ -142,7 +146,7 @@ export async function toggleNeedShifts(chatId: number, from: TelegramUser | unde
   const { error } = await db.from("telegram_need_shifts").upsert({
     telegram_user_id: from.id, first_name: from.first_name || "Без имени", last_name: from.last_name || null,
     username: from.username || null, week_start: weekStart, created_at: new Date().toISOString(),
-    request_date: null, time_from: null, time_to: null, location_mode: "any", locations: [],
+    request_date: null, request_dates: [], whole_week: false, time_from: null, time_to: null, location_mode: "any", locations: [],
   }, { onConflict: "telegram_user_id" });
   if (error) throw error;
   await telegramApi("sendMessage", {
