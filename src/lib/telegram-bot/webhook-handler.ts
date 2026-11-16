@@ -230,7 +230,17 @@ export async function handleTelegramWebhook(request: Request) {
         else if (parts[1] === "back" && parts[2] === "loc") await showStaffLocations(chat, q.message?.message_id);
         else if (parts[1] === "back" && parts[2] === "dates") await showStaffDates(chat, Number(parts[3]), q.message?.message_id);
         else if (parts[1] === "leaderboard") await showStaffLeaderboard(chat, q.message?.message_id);
-        else if (parts[1] === "waiting") await showWaitingShifts(chat, q.message?.message_id);
+        else if (parts[1] === "waiting") {
+          try {
+            await showWaitingShifts(chat, q.message?.message_id);
+          } catch (waitingError) {
+            console.error("Could not load waiting shifts list", waitingError);
+            await telegramApi("sendMessage", {
+              chat_id: chat,
+              text: "⚠️ Возникли технические неполадки. Не удалось загрузить список ожидающих смену. Обратитесь к администратору @onesandred.",
+            });
+          }
+        }
         else if (parts[1] === "employees") await showStaffEmployees(chat, Number(parts[2] || 0), q.message?.message_id);
         else if (parts[1] === "person") await showStaffEmployeeWeek(chat, parts[2] || "", Number(parts[3] || 0), q.message?.message_id);
         else if (parts[1] === "noop") { /* Pagination indicator only. */ }
