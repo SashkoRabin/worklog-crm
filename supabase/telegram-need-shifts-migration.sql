@@ -23,3 +23,13 @@ create index if not exists telegram_need_shifts_week_created_idx
   on public.telegram_need_shifts (week_start, created_at);
 
 alter table public.telegram_need_shifts enable row level security;
+
+-- Multiple preferred dates and the whole-week option.
+alter table public.telegram_need_shifts
+  add column if not exists request_dates date[] not null default '{}',
+  add column if not exists whole_week boolean not null default false;
+
+-- Preserve existing single-date requests when upgrading.
+update public.telegram_need_shifts
+set request_dates = array[request_date]
+where request_date is not null and coalesce(cardinality(request_dates), 0) = 0;
