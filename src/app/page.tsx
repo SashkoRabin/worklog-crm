@@ -659,6 +659,7 @@ export default function Home() {
           <ShiftCard
             key={`${editing?.id ?? "new"}-${date}`}
             t={t}
+            lang={lang}
             editing={editing}
             date={date}
             dayShifts={shifts.filter((shift) => shift.work_date === date)}
@@ -919,6 +920,7 @@ function ConnecteamDialog({
 
 function ShiftCard({
   t,
+  lang,
   editing,
   date,
   dayShifts,
@@ -931,6 +933,7 @@ function ShiftCard({
   syncDayError,
 }: {
   t: (typeof copy)[Lang];
+  lang: Lang;
   editing: Shift | null;
   date: string;
   dayShifts: Shift[];
