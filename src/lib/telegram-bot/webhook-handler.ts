@@ -7,6 +7,7 @@ import { menuKeyboard, sendMenu } from "./menu";
 import { showStaffHome, showStaffScheduleHome, showStaffLocations, showStaffDates, showStaffForDate, showStaffAllDates, showStaffAllForDate, showStaffEmployees, showStaffEmployeeWeek } from "./features/staff";
 import { showSchedule, showMonthShifts, showEarnings, showGuide, showScheduleMenu, showUpcomingShifts, toggleReminders } from "./features/dashboard";
 import { showStaffLeaderboard } from "./features/staff-leaderboard";
+import { reconcileCurrentMonth } from "./features/shift-reconciliation";
 import { toggleNeedShifts, answerNeedShiftsInlineQuery, showWaitingShifts, handleNeedShiftsCallback } from "./features/need-shifts";
 
 function matchSecret(received: string | null, expected: string) {
@@ -192,7 +193,22 @@ export async function handleTelegramWebhook(request: Request) {
       const { data: account, error } = await db.from("telegram_accounts").select("language,reminders_enabled,timezone,linked_user_id").eq("telegram_user_id", q.from.id).single();
       if (error) throw error;
       const lang = getLanguage(account.language);
-      if (q.data?.startsWith("schedule:")) {
+      if (q.data === "shiftcheck:run") {
+        await telegramApi("answerCallbackQuery", { callback_query_id: q.id, text: "Сверяю расписания за текущий месяц…" });
+        if (!account.linked_user_id) {
+          await telegramApi("sendMessage", { chat_id: chat, text: "Сначала привяжи Telegram к аккаунту WorkLog на сайте → Telegram." });
+        } else {
+          try {
+            await reconcileCurrentMonth(chat, account.linked_user_id, lang);
+          } catch (reconcileError) {
+            console.error("Monthly shift reconciliation failed", reconcileError);
+            await telegramApi("sendMessage", {
+              chat_id: chat,
+              text: "⚠️ Не удалось сверить смены из-за технической ошибки. Проверь подключение Connecteam и обратись к администратору @onesandred.",
+            });
+          }
+        }
+      } else if (q.data?.startsWith("schedule:")) {
         await telegramApi("answerCallbackQuery", { callback_query_id: q.id });
         const action = q.data.split(":")[1];
         if (action === "close") {
