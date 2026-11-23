@@ -267,11 +267,15 @@ export default function Home() {
   const upcomingShifts = useMemo(() => {
     const sorted = shifts
       .filter((shift) => shift.work_date >= today)
-      .sort(
-        (left, right) =>
-          left.work_date.localeCompare(right.work_date) ||
-          left.shift_name.localeCompare(right.shift_name),
-      );
+      .sort((left, right) => {
+        const startMinutes = (value: string) => {
+          const match = value.match(/^(\\d{1,2}):(\\d{2})/);
+          return match ? Number(match[1]) * 60 + Number(match[2]) : Number.MAX_SAFE_INTEGER;
+        };
+        return left.work_date.localeCompare(right.work_date) ||
+          left.store.localeCompare(right.store) ||
+          startMinutes(left.shift_name) - startMinutes(right.shift_name);
+      });
     const parseRange = (value: string) => {
       const match = value.match(/(\\d{1,2}:\\d{2})\\s*[–—-]\\s*(\\d{1,2}:\\d{2})/);
       if (!match) return null;
