@@ -703,8 +703,8 @@ export default function Home() {
           ) : (
             <div className="empty">{t.empty}</div>
           )}
-        )}
         </section>
+        )}
       </section>
       <MobileNav
         active="calendar"
