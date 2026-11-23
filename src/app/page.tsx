@@ -269,7 +269,7 @@ export default function Home() {
       .filter((shift) => shift.work_date >= today)
       .sort((left, right) => {
         const startMinutes = (value: string) => {
-          const match = value.match(/^(\\d{1,2}):(\\d{2})/);
+          const match = value.match(/^(\d{1,2}):(\d{2})/);
           return match ? Number(match[1]) * 60 + Number(match[2]) : Number.MAX_SAFE_INTEGER;
         };
         return left.work_date.localeCompare(right.work_date) ||
@@ -277,7 +277,7 @@ export default function Home() {
           startMinutes(left.shift_name) - startMinutes(right.shift_name);
       });
     const parseRange = (value: string) => {
-      const match = value.match(/(\\d{1,2}:\\d{2})\\s*[–—-]\\s*(\\d{1,2}:\\d{2})/);
+      const match = value.match(/(\d{1,2}:\d{2})\s*[–—-]\s*(\d{1,2}:\d{2})/);
       if (!match) return null;
       const toMinutes = (time: string) => {
         const [hours, minutes] = time.split(":").map(Number);
