@@ -265,25 +265,20 @@ export default function Home() {
     end: endOfMonth(month),
   });
   const upcomingShifts = useMemo(() => {
-    const sorted = shifts
-      .filter((shift) => shift.work_date >= today)
-      .sort((left, right) => {
-        const startMinutes = (value: string) => {
-          const match = value.match(/^(\d{1,2}):(\d{2})/);
-          return match ? Number(match[1]) * 60 + Number(match[2]) : Number.MAX_SAFE_INTEGER;
-        };
-        return left.work_date.localeCompare(right.work_date) ||
-          left.store.localeCompare(right.store) ||
-          startMinutes(left.shift_name) - startMinutes(right.shift_name);
-      });
     const parseRange = (value: string) => {
-      const match = value.match(/(\d{1,2}:\d{2})\s*[–—-]\s*(\d{1,2}:\d{2})/);
+      const normalized = value.replace(/[–—−]/g, "-").replace(/\\s+/g, "");
+      const match = normalized.match(/(\\d{1,2}:\\d{2})-(\\d{1,2}:\\d{2})/);
       if (!match) return null;
       const toMinutes = (time: string) => {
         const [hours, minutes] = time.split(":").map(Number);
         return hours * 60 + minutes;
       };
-      return { start: toMinutes(match[1]), end: toMinutes(match[2]), startText: match[1], endText: match[2] };
+      return {
+        start: toMinutes(match[1]),
+        end: toMinutes(match[2]),
+        startText: match[1],
+        endText: match[2],
+      };
     };
     type UpcomingGroup = {
       id: string;
@@ -293,22 +288,28 @@ export default function Home() {
       amount: number;
       shiftName: string;
     };
+    const sorted = shifts
+      .filter((shift) => shift.work_date >= today)
+      .sort((left, right) =>
+        left.work_date.localeCompare(right.work_date) ||
+        left.store.trim().localeCompare(right.store.trim()) ||
+        (parseRange(left.shift_name)?.start ?? Number.MAX_SAFE_INTEGER) -
+          (parseRange(right.shift_name)?.start ?? Number.MAX_SAFE_INTEGER),
+      );
     const groups: UpcomingGroup[] = [];
     for (const shift of sorted) {
       const range = parseRange(shift.shift_name);
       const previous = groups[groups.length - 1];
       const previousRange = previous ? parseRange(previous.shiftName) : null;
-      const sameGroup =
+      const sameDayAndStore =
         previous &&
         previous.shift.work_date === shift.work_date &&
-        previous.shift.store === shift.store &&
-        isWorkedShift(previous.shift) === isWorkedShift(shift) &&
-        previousRange &&
-        range &&
+        previous.shift.store.trim().toLocaleLowerCase() === shift.store.trim().toLocaleLowerCase();
+      const isConsecutive =
+        previousRange && range &&
         (previousRange.end === range.start ||
-          (previousRange.end === 1440 && range.start === 0)) &&
-        previous.shifts.every((item) => item.hourly_rate === shift.hourly_rate);
-      if (sameGroup) {
+          (previousRange.end === 1440 && range.start === 0));
+      if (sameDayAndStore && isConsecutive) {
         previous.shifts.push(shift);
         previous.hours += shift.hours;
         previous.amount += shift.hours * shift.hourly_rate;
