@@ -38,6 +38,7 @@ import {
   dismissConnecteamShift,
   loadUserShifts,
   syncConnecteamCalendar,
+  syncConnecteamDay,
   syncConnecteamIfConnected,
 } from "@/lib/connecteam-client";
 import { supabase } from "@/lib/supabase";
@@ -172,7 +173,9 @@ export default function Home() {
     [dialog, setDialog] = useState<"settings" | "quick" | "connecteam" | null>(null),
     [date, setDate] = useState(today),
     [editing, setEditing] = useState<Shift | null>(null),
-    [isShiftEditorOpen, setIsShiftEditorOpen] = useState(false);
+    [isShiftEditorOpen, setIsShiftEditorOpen] = useState(false),
+    [isDaySyncing, setIsDaySyncing] = useState(false),
+    [daySyncError, setDaySyncError] = useState("");
   const t = copy[lang];
   useEffect(() => {
     let active = true;
@@ -404,6 +407,22 @@ export default function Home() {
         setShifts((all) => [shift, ...all]);
         console.error("Unable to delete shift", error);
       }
+    }
+  }
+  async function syncSelectedDay() {
+    if (!user || isDaySyncing) return;
+    setIsDaySyncing(true);
+    setDaySyncError("");
+    try {
+      await syncConnecteamDay(date);
+      const freshRows = await loadUserShifts(user.id);
+      setShifts(freshRows);
+      setEditing(null);
+    } catch (error) {
+      console.error("Unable to sync selected day from Connecteam", error);
+      setDaySyncError(error instanceof Error ? error.message : "Не удалось синхронизировать день.");
+    } finally {
+      setIsDaySyncing(false);
     }
   }
   async function refreshShifts() {
@@ -650,6 +669,9 @@ export default function Home() {
             }}
             onSave={saveShift}
             onDelete={deleteShift}
+            onSyncDay={syncSelectedDay}
+            isSyncingDay={isDaySyncing}
+            syncDayError={daySyncError}
           />
         )}
         </div>
@@ -904,6 +926,9 @@ function ShiftCard({
   onClose,
   onSave,
   onDelete,
+  onSyncDay,
+  isSyncingDay,
+  syncDayError,
 }: {
   t: (typeof copy)[Lang];
   editing: Shift | null;
@@ -913,6 +938,9 @@ function ShiftCard({
   onClose: () => void;
   onSave: (event: FormEvent<HTMLFormElement>) => void;
   onDelete: (shift: Shift) => void;
+  onSyncDay: () => void;
+  isSyncingDay: boolean;
+  syncDayError: string;
 }) {
   const initialStore = stores.find((store) => store.name === editing?.store) || stores[0];
   const initialShift = Math.max(
@@ -966,6 +994,11 @@ function ShiftCard({
         </button>
         </div>
         <div className="shift-editor-body">
+          <button type="button" className="connecteam-cta compact" onClick={onSyncDay} disabled={isSyncingDay}>
+            <CalendarDays size={16} />
+            <span><b>{isSyncingDay ? (lang === "ru" ? "Синхронизация…" : lang === "cs" ? "Synchronizuji…" : "Syncing…") : (lang === "ru" ? "Синхронизировать" : lang === "cs" ? "Synchronizovat" : "Sync from Connecteam")}</b><small>{lang === "ru" ? "Заменить смены этого дня графиком Connecteam" : lang === "cs" ? "Nahradit směny dne plánem Connecteam" : "Replace this day with Connecteam schedule"}</small></span>
+          </button>
+          {syncDayError && <p className="data-error" role="alert">{syncDayError}</p>}
           {dayShifts.length > 0 && (
             <section className="day-shift-list" aria-label="Shifts for selected day">
               <div className="day-shift-list-head">
