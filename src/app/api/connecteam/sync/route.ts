@@ -185,6 +185,8 @@ export async function POST(request: Request) {
     const ics = await response.text();
     if ((!contentType.includes("calendar") && !ics.includes("BEGIN:VCALENDAR")) || ics.length > 2_000_000) throw new Error("The link did not return a valid calendar.");
     const calendarItems = parseCalendar(ics);
+    const forceDate = typeof body.forceDate === "string" && /^\\d{4}-\\d{2}-\\d{2}$/.test(body.forceDate) ? body.forceDate : null;
+    if (body.forceDate && !forceDate) throw new Error("Invalid date for Connecteam day sync.");
     const [{ data: manualShifts, error: manualShiftsError }, dismissed, { data: profile, error: profileError }] =
       await Promise.all([
         context.database
@@ -214,14 +216,14 @@ export async function POST(request: Request) {
       return true;
     });
     const hourlyRate = Number(profile?.hourly_rate ?? 0);
-    const deleted = await context.database.from("shifts").delete().eq("user_id", context.user.id).eq("source", "connecteam");
+    const deleted = forceDate\n      ? await context.database.from("shifts").delete().eq("user_id", context.user.id).eq("work_date", forceDate)\n      : await context.database.from("shifts").delete().eq("user_id", context.user.id).eq("source", "connecteam");
     if (deleted.error) throw deleted.error;
     if (items.length) {
       const imported = items.map((event) => shiftFromEvent(context.user.id, event, hourlyRate));
       const inserted = await context.database.from("shifts").insert(imported);
       if (inserted.error) throw inserted.error;
     }
-    const updated = await context.database.from("connecteam_connections").update({ last_synced_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("user_id", context.user.id);
+    if (forceDate && items.length) {\n      const ids = items.map((event) => event.uid);\n      const clearedDismissals = await context.database.from("connecteam_dismissed_shifts").delete().eq("user_id", context.user.id).in("external_id", ids);\n      if (clearedDismissals.error && !isMissingRelation(clearedDismissals.error)) throw clearedDismissals.error;\n    }\n    const updated = await context.database.from("connecteam_connections").update({ last_synced_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("user_id", context.user.id);
     if (updated.error) throw updated.error;
     return NextResponse.json({ imported: items.length });
   } catch (error) {
