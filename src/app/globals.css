@@ -2120,3 +2120,56 @@ h2 {
     transition: none;
   }
 }
+
+
+/* Explicit backend loading and recoverable error states for dashboard data. */
+.data-state-card,
+.calendar-data-state {
+  display: flex;
+  min-height: 190px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  padding: 28px;
+  text-align: center;
+}
+.data-state-card {
+  margin: 22px 0;
+}
+.data-state-card p,
+.calendar-data-state p {
+  max-width: 560px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.data-state-error strong,
+.calendar-data-state.data-state-error strong {
+  color: #d66a72;
+}
+.data-state-card .primary,
+.calendar-data-state .primary {
+  min-height: 40px;
+  padding: 9px 18px;
+}
+.calendar-data-state {
+  min-height: 340px;
+}
+.data-state-card .spinner,
+.calendar-data-state .spinner {
+  display: block;
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(128, 112, 190, 0.2);
+  border-top-color: var(--purple);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .data-state-card .spinner,
+  .calendar-data-state .spinner {
+    animation-duration: 1.8s;
+  }
+}
