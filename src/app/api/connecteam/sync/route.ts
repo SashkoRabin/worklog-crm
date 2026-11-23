@@ -50,7 +50,9 @@ function validateCalendarUrl(value: unknown) {
 }
 
 function unescapeIcs(value = "") {
-  return value.replace(/\\n/gi, "\n").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\");
+  return value.replace(/\
+/gi, "
+").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\");
 }
 
 function parseIcsDate(value: string) {
@@ -69,7 +71,9 @@ function valueFor(lines: string[], name: string) {
 }
 
 function parseCalendar(ics: string) {
-  const unfolded = ics.replace(/\r?\n[ \t]/g, "").split(/\r?\n/);
+  const unfolded = ics.replace(/\r?
+[ \t]/g, "").split(/\r?
+/);
   const events: CalendarEvent[] = [];
   let block: string[] | null = null;
   for (const line of unfolded) {
@@ -219,7 +223,8 @@ export async function POST(request: Request) {
       const ids = items.map((event) => event.uid);
       const clearedDismissals = await context.database.from("connecteam_dismissed_shifts").delete().eq("user_id", context.user.id).in("external_id", ids);
       if (clearedDismissals.error && !isMissingRelation(clearedDismissals.error)) throw clearedDismissals.error;
-    }\n    const updated = await context.database.from("connecteam_connections").update({ last_synced_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("user_id", context.user.id);
+    }
+    const updated = await context.database.from("connecteam_connections").update({ last_synced_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("user_id", context.user.id);
     if (updated.error) throw updated.error;
     return NextResponse.json({ imported: items.length });
   } catch (error) {
