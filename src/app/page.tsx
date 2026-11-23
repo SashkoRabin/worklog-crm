@@ -58,6 +58,19 @@ const profileText = {
 
 const current = new Date(),
   today = format(current, "yyyy-MM-dd");
+async function withTimeout<T>(promise: Promise<T>, timeoutMs = 15000): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Загрузка данных заняла слишком много времени. Проверьте соединение и попробуйте ещё раз.")), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 const readThemeCookie = () => {
   if (typeof document === "undefined") return null;
   return document.cookie.match(
@@ -150,6 +163,9 @@ export default function Home() {
     ),
     [user, setUser] = useState<{ id: string; email?: string } | null>(null),
     [shifts, setShifts] = useState<Shift[]>(demo),
+    [dataState, setDataState] = useState<"loading" | "ready" | "error">("loading"),
+    [dataError, setDataError] = useState(""),
+    [reloadKey, setReloadKey] = useState(0),
     [rate, setRate] = useState(150),
     [name, setName] = useState(""),
     [month, setMonth] = useState(current),
@@ -159,6 +175,7 @@ export default function Home() {
     [isShiftEditorOpen, setIsShiftEditorOpen] = useState(false);
   const t = copy[lang];
   useEffect(() => {
+    let active = true;
     const savedLang = localStorage.getItem("worklog-lang") as Lang | null,
       savedTheme = (readThemeCookie() ||
         localStorage.getItem("worklog-theme")) as "light" | "dark" | null,
@@ -166,30 +183,50 @@ export default function Home() {
     if (savedLang) setLang(savedLang);
     if (savedTheme) setTheme(savedTheme);
     document.documentElement.dataset.theme = savedTheme || "light";
-    if (!client) return;
-    client.auth.getSession().then(async ({ data }) => {
-      const user = data.session?.user;
-      if (!user) return;
-      setUser(user);
-      const [{ data: profile }, rows] = await Promise.all([
-        client
-          .from("profiles")
-          .select("hourly_rate,display_name")
-          .eq("id", user.id)
-          .single(),
-        loadUserShifts(user.id),
-      ]);
-      setShifts(rows);
-      if (profile?.hourly_rate) setRate(Number(profile.hourly_rate));
-      if (profile?.display_name) setName(profile.display_name);
 
-      // Calendar synchronisation can take several seconds. Let the dashboard
-      // become interactive first, then refresh only if the background sync did work.
-      void syncConnecteamIfConnected().then((result) => {
-        if (result.synced) void loadUserShifts(user.id).then(setShifts);
-      });
-    });
-  }, []);
+    const load = async () => {
+      setDataState("loading");
+      setDataError("");
+      try {
+        if (!client) throw new Error("Не удалось подключиться к базе данных.");
+        const { data, error: sessionError } = await withTimeout(client.auth.getSession());
+        if (sessionError) throw sessionError;
+        const sessionUser = data.session?.user;
+        if (!sessionUser) {
+          if (active) {
+            setShifts([]);
+            setDataState("ready");
+          }
+          return;
+        }
+        if (active) setUser(sessionUser);
+        const [profileResult, rows] = await withTimeout(Promise.all([
+          client.from("profiles").select("hourly_rate,display_name").eq("id", sessionUser.id).single(),
+          loadUserShifts(sessionUser.id),
+        ]));
+        if (profileResult.error) console.warn("Unable to load profile settings", profileResult.error);
+        if (!active) return;
+        setShifts(rows);
+        if (profileResult.data?.hourly_rate) setRate(Number(profileResult.data.hourly_rate));
+        if (profileResult.data?.display_name) setName(profileResult.data.display_name);
+        setDataState("ready");
+
+        // Optional Connecteam sync runs in the background and cannot block the dashboard.
+        void syncConnecteamIfConnected()
+          .then((result) => result.synced ? loadUserShifts(sessionUser.id) : null)
+          .then((freshRows) => { if (active && freshRows) setShifts(freshRows); })
+          .catch((error) => console.error("Background Connecteam refresh failed", error));
+      } catch (error) {
+        console.error("Dashboard data loading failed", error);
+        if (active) {
+          setDataError(error instanceof Error ? error.message : "Не удалось загрузить данные.");
+          setDataState("error");
+        }
+      }
+    };
+    void load();
+    return () => { active = false; };
+  }, [reloadKey]);
   useEffect(() => {
     localStorage.setItem("worklog-lang", lang);
   }, [lang]);
@@ -427,7 +464,18 @@ export default function Home() {
             {t.add}
           </button>
         </header>
-        <div className="metrics">
+        {dataState === "loading" ? (
+          <section className="card data-state-card" aria-live="polite">
+            <span className="spinner" />
+            <strong>Загружаем аналитику…</strong>
+          </section>
+        ) : dataState === "error" ? (
+          <section className="card data-state-card data-state-error" role="alert">
+            <strong>Не удалось загрузить аналитику</strong>
+            <p>{dataError}</p>
+            <button className="primary" onClick={() => setReloadKey((value) => value + 1)}>Повторить</button>
+          </section>
+        ) : <div className="metrics">
           <Metric
             icon={<WalletCards />}
             label={t.earned}
@@ -452,9 +500,18 @@ export default function Home() {
                 : t.empty
             }
           />
-        </div>
+        </div>}
         <div className={`calendar-editor-layout ${isShiftEditorOpen ? "is-editing" : ""}`}>
         <section className="card calendar-card">
+          {dataState === "loading" ? (
+            <div className="calendar-data-state" aria-live="polite"><span className="spinner" /><strong>Загружаем календарь…</strong></div>
+          ) : dataState === "error" ? (
+            <div className="calendar-data-state data-state-error" role="alert">
+              <strong>Не удалось загрузить календарь</strong><p>{dataError}</p>
+              <button className="primary" onClick={() => setReloadKey((value) => value + 1)}>Повторить</button>
+            </div>
+          ) : <>
+
           <div className="card-head">
             <div>
               <h2>{format(month, "LLLL yyyy", { locale: locales[lang] })}</h2>
@@ -525,8 +582,9 @@ export default function Home() {
               );
             })}
           </div>
+          </>}
         </section>
-        {isShiftEditorOpen && (
+        {dataState === "ready" && isShiftEditorOpen && (
           <ShiftCard
             key={`${editing?.id ?? "new"}-${date}`}
             t={t}
