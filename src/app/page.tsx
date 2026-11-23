@@ -266,8 +266,8 @@ export default function Home() {
   });
   const upcomingShifts = useMemo(() => {
     const parseRange = (value: string) => {
-      const normalized = value.replace(/[–—−]/g, "-").replace(/\\s+/g, "");
-      const match = normalized.match(/(\\d{1,2}:\\d{2})-(\\d{1,2}:\\d{2})/);
+      const normalized = value.replace(/[–—−]/g, "-").replace(/\s+/g, "");
+      const match = normalized.match(/(\d{1,2}:\d{2})-(\d{1,2}:\d{2})/);
       if (!match) return null;
       const toMinutes = (time: string) => {
         const [hours, minutes] = time.split(":").map(Number);
