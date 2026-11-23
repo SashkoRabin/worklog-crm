@@ -264,17 +264,64 @@ export default function Home() {
     start: startOfMonth(month),
     end: endOfMonth(month),
   });
-  const upcomingShifts = useMemo(
-    () =>
-      shifts
-        .filter((shift) => shift.work_date >= today)
-        .sort(
-          (left, right) =>
-            left.work_date.localeCompare(right.work_date) ||
-            left.shift_name.localeCompare(right.shift_name),
-        ),
-    [shifts],
-  );
+  const upcomingShifts = useMemo(() => {
+    const sorted = shifts
+      .filter((shift) => shift.work_date >= today)
+      .sort(
+        (left, right) =>
+          left.work_date.localeCompare(right.work_date) ||
+          left.shift_name.localeCompare(right.shift_name),
+      );
+    const parseRange = (value: string) => {
+      const match = value.match(/(\\d{1,2}:\\d{2})\\s*[–—-]\\s*(\\d{1,2}:\\d{2})/);
+      if (!match) return null;
+      const toMinutes = (time: string) => {
+        const [hours, minutes] = time.split(":").map(Number);
+        return hours * 60 + minutes;
+      };
+      return { start: toMinutes(match[1]), end: toMinutes(match[2]), startText: match[1], endText: match[2] };
+    };
+    type UpcomingGroup = {
+      id: string;
+      shift: Shift;
+      shifts: Shift[];
+      hours: number;
+      amount: number;
+      shiftName: string;
+    };
+    const groups: UpcomingGroup[] = [];
+    for (const shift of sorted) {
+      const range = parseRange(shift.shift_name);
+      const previous = groups[groups.length - 1];
+      const previousRange = previous ? parseRange(previous.shiftName) : null;
+      const sameGroup =
+        previous &&
+        previous.shift.work_date === shift.work_date &&
+        previous.shift.store === shift.store &&
+        isWorkedShift(previous.shift) === isWorkedShift(shift) &&
+        previousRange &&
+        range &&
+        (previousRange.end === range.start ||
+          (previousRange.end === 1440 && range.start === 0)) &&
+        previous.shifts.every((item) => item.hourly_rate === shift.hourly_rate);
+      if (sameGroup) {
+        previous.shifts.push(shift);
+        previous.hours += shift.hours;
+        previous.amount += shift.hours * shift.hourly_rate;
+        previous.shiftName = `${previousRange.startText}–${range.endText}`;
+      } else {
+        groups.push({
+          id: shift.id,
+          shift,
+          shifts: [shift],
+          hours: shift.hours,
+          amount: shift.hours * shift.hourly_rate,
+          shiftName: shift.shift_name,
+        });
+      }
+    }
+    return groups;
+  }, [shifts]);
   const upcomingShiftsTitle = {
     en: "Upcoming shifts",
     ru: "Предстоящие смены",
@@ -615,8 +662,10 @@ export default function Home() {
             </button>
           </div>
           {upcomingShifts.length ? (
-            upcomingShifts.slice(0, 5).map((shift) => (
-              <div className="shift-row" key={shift.id}>
+            upcomingShifts.slice(0, 5).map((group) => {
+              const shift = group.shift;
+              return (
+              <div className="shift-row" key={group.id}>
                 <div className="date-box">
                   <b>{format(parseISO(shift.work_date), "dd")}</b>
                   <span>
@@ -627,24 +676,25 @@ export default function Home() {
                 </div>
                 <div className="shift-info">
                   <b>{shift.store}</b>
-                  <span>{shift.shift_name}</span>
+                  <span>{group.shiftName}</span>
                 </div>
                 <span className={`pill ${isWorkedShift(shift) ? "worked" : "assigned"}`}>
                   {isWorkedShift(shift) ? t.workedType : t.upcoming}
                 </span>
-                <span className="shift-hours">{shift.hours} h</span>
+                <span className="shift-hours">{group.hours} h</span>
                 <b className="shift-money">
-                  {money(shift.hours * shift.hourly_rate)}
+                  {money(group.amount)}
                 </b>
                 <button
                   className="delete"
                   aria-label="Delete shift"
-                  onClick={() => deleteShift(shift)}
+                  onClick={() => group.shifts.forEach((item) => void deleteShift(item))}
                 >
                   <X size={16} />
                 </button>
               </div>
-            ))
+              );
+            })
           ) : (
             <div className="empty">{t.empty}</div>
           )}
