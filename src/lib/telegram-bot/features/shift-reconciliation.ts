@@ -62,7 +62,7 @@ function dateKey(date: Date) { return date.toISOString().slice(0, 10); }
 function timeKey(date: Date) { return `${String(date.getUTCHours()).padStart(2, "0")}:${String(date.getUTCMinutes()).padStart(2, "0")}`; }
 function eventStore(event: CalendarEvent) {
   const title = event.title.replace(/^cashier\s*[-–—:]\s*/i, "").trim();
-  return (event.location || title || "Connecteam").trim();
+  return (title || event.location || "Connecteam").trim();
 }
 function normalize(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("en").replace(/[^a-z0-9]+/g, " ").trim();
@@ -103,7 +103,7 @@ export async function reconcileCurrentMonth(chatId: number, userId: string, lang
   const ics = await response.text();
   if (ics.length > 2_000_000 || !ics.includes("BEGIN:VCALENDAR")) throw new Error("Connecteam returned an invalid calendar.");
   const events = parseCalendar(ics).filter(event => dateKey(event.startsAt) >= from && dateKey(event.startsAt) <= to);
-  const workLog = ((workLogRows || []) as WorkLogShift[]).filter(shift => shift.source !== "connecteam" || true);
+  const workLog = (workLogRows || []) as WorkLogShift[];
 
   const workLogBuckets = new Map<string, WorkLogShift[]>();
   for (const shift of workLog) {
