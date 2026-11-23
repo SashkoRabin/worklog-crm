@@ -601,6 +601,7 @@ export default function Home() {
           />
         )}
         </div>
+        {dataState === "ready" && (
         <section className="card recent">
           <div className="card-head">
             <div>
@@ -647,6 +648,7 @@ export default function Home() {
           ) : (
             <div className="empty">{t.empty}</div>
           )}
+        )}
         </section>
       </section>
       <MobileNav
