@@ -173,7 +173,7 @@ export async function showEarnings(chatId: number, linkedUserId: string, lang: L
     `⏱ ${potentialHours.toLocaleString("ru-RU", { maximumFractionDigits: 1 })} ${t.hours} · ${money(potentialMoney, lang)}`,
     `<i>${t.potentialNote}</i>`,
   ].join("\n");
-  await telegramApi("sendMessage", { chat_id: chatId, text, parse_mode: "HTML" });
+  await telegramApi("sendMessage", { chat_id: chatId, text, parse_mode: "HTML", reply_markup: { inline_keyboard: [[{ text: "🔍 Сверить смены", callback_data: "shiftcheck:run" }]] } });
 }
 export async function showGuide(chatId: number, lang: Lang) {
   const t = copy[lang];
