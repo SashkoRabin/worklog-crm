@@ -50,10 +50,9 @@ function validateCalendarUrl(value: unknown) {
 }
 
 function unescapeIcs(value = "") {
-  return value.replace(/\
-/gi, "
-").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\");
+  return value.replace(/\\n/gi, "\n").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\");
 }
+
 
 function parseIcsDate(value: string) {
   const match = value.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?)?(Z)?$/);
@@ -71,9 +70,7 @@ function valueFor(lines: string[], name: string) {
 }
 
 function parseCalendar(ics: string) {
-  const unfolded = ics.replace(/\r?
-[ \t]/g, "").split(/\r?
-/);
+  const unfolded = ics.replace(/\r?\n[ \t]/g, "").split(/\r?\n/);
   const events: CalendarEvent[] = [];
   let block: string[] | null = null;
   for (const line of unfolded) {
