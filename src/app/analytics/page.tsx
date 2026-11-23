@@ -21,6 +21,19 @@ import { supabase } from "@/lib/supabase";
 import { MobileNav } from "@/components/mobile-nav";
 
 const now = new Date();
+async function withTimeout<T>(promise: Promise<T>, timeoutMs = 15000): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Загрузка данных заняла слишком много времени. Проверьте соединение и попробуйте ещё раз.")), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 const readThemeCookie = () => {
   if (typeof document === "undefined") return null;
   return document.cookie.match(
@@ -110,9 +123,13 @@ export default function Analytics() {
       () => readThemeCookie() || "light",
     ),
     [shifts, setShifts] = useState<Shift[]>(seed),
+    [dataState, setDataState] = useState<"loading" | "ready" | "error">("loading"),
+    [dataError, setDataError] = useState(""),
+    [reloadKey, setReloadKey] = useState(0),
     [mobileMenu, setMobileMenu] = useState(false);
   const t = copy[lang];
   useEffect(() => {
+    let active = true;
     const savedLang = localStorage.getItem("worklog-lang") as Lang | null,
       savedTheme = (readThemeCookie() ||
         localStorage.getItem("worklog-theme")) as "light" | "dark" | null,
@@ -120,18 +137,38 @@ export default function Analytics() {
     if (savedLang) setLang(savedLang);
     if (savedTheme) setTheme(savedTheme);
     document.documentElement.dataset.theme = savedTheme || "light";
-    if (!client) return;
-    client.auth.getSession().then(async ({ data }) => {
-      const user = data.session?.user;
-      if (!user) return;
-      setShifts(await loadUserShifts(user.id));
-      // Do not hold analytics behind a remote calendar request. If a linked
-      // calendar changes, refresh the already rendered view in the background.
-      void syncConnecteamIfConnected().then((result) => {
-        if (result.synced) void loadUserShifts(user.id).then(setShifts);
-      });
-    });
-  }, []);
+
+    const load = async () => {
+      setDataState("loading");
+      setDataError("");
+      try {
+        if (!client) throw new Error("Не удалось подключиться к базе данных.");
+        const { data, error: sessionError } = await withTimeout(client.auth.getSession());
+        if (sessionError) throw sessionError;
+        const sessionUser = data.session?.user;
+        if (!sessionUser) {
+          if (active) { setShifts([]); setDataState("ready"); }
+          return;
+        }
+        const rows = await withTimeout(loadUserShifts(sessionUser.id));
+        if (!active) return;
+        setShifts(rows);
+        setDataState("ready");
+        void syncConnecteamIfConnected()
+          .then((result) => result.synced ? loadUserShifts(sessionUser.id) : null)
+          .then((freshRows) => { if (active && freshRows) setShifts(freshRows); })
+          .catch((error) => console.error("Background analytics refresh failed", error));
+      } catch (error) {
+        console.error("Analytics data loading failed", error);
+        if (active) {
+          setDataError(error instanceof Error ? error.message : "Не удалось загрузить данные.");
+          setDataState("error");
+        }
+      }
+    };
+    void load();
+    return () => { active = false; };
+  }, [reloadKey]);
   useEffect(() => {
     localStorage.setItem("worklog-lang", lang);
   }, [lang]);
@@ -222,6 +259,17 @@ export default function Analytics() {
             <b>{format(now, "LLLL yyyy", { locale: locales[lang] })}</b>
           </div>
         </header>
+        {dataState === "loading" ? (
+          <section className="card data-state-card" aria-live="polite">
+            <span className="spinner" /><strong>Загружаем аналитику…</strong>
+          </section>
+        ) : dataState === "error" ? (
+          <section className="card data-state-card data-state-error" role="alert">
+            <strong>Не удалось загрузить аналитику</strong>
+            <p>{dataError}</p>
+            <button className="primary" onClick={() => setReloadKey((value) => value + 1)}>Повторить</button>
+          </section>
+        ) : <>
         <div className="insights">
           <Insight
             icon={<Clock3 />}
@@ -334,6 +382,7 @@ export default function Analytics() {
             <div className="empty">{t.empty}</div>
           )}
         </section>
+        </>}
       </section>
       <MobileNav
         active="analytics"
