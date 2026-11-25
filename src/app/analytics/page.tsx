@@ -262,7 +262,7 @@ export default function Analytics() {
               const unit = goalType === "income" ? "" : ` ${a.hoursShort}`;
               const valueLabel = goalType === "income" ? money(achieved) : `${achieved.toLocaleString(lang)}${unit}`;
               const targetLabel = goalType === "income" ? money(goalValue) : `${goalValue.toLocaleString(lang)}${unit}`;
-              return <><div className="an-goal-values"><strong>{valueLabel}</strong><span>{targetLabel}</span><b>{percent}%</b></div><div className="an-goal-track" role="progressbar" aria-valuenow={Math.min(percent,100)} aria-valuemin={0} aria-valuemax={100}><i style={{width:`${Math.min(Math.max(percent,0),100)}%`}}/></div><div className="an-goal-foot"><span>{goalType === "income" ? a.earnings : a.hours}</span><span>{Math.max(0, goalValue-achieved).toLocaleString(lang)} {a.remaining}</span></div></>;
+              return <><div className="an-goal-values"><strong>{valueLabel}</strong><span>{targetLabel}</span><b>{percent}%</b></div><div className="an-goal-track" role="progressbar" aria-valuenow={Math.min(percent,100)} aria-valuemin={0} aria-valuemax={100}><i style={{width:`${Math.min(Math.max(percent,0),100)}%`}}/></div><div className="an-goal-foot"><span>{goalType === "income" ? a.earnings : a.hours}</span><span>{goalType === "income" ? money(Math.max(0, goalValue-achieved)) : Math.max(0, goalValue-achieved).toLocaleString(lang)} {a.remaining}</span></div></>;
             })() : <div className="an-goal-empty"><p>{a.noGoal}</p><Link href="/profile">{a.setGoal} →</Link></div>}
           </section>
 
