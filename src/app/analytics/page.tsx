@@ -21,13 +21,13 @@ import { supabase } from "@/lib/supabase";
 import { MobileNav } from "@/components/mobile-nav";
 
 const now = new Date();
-async function withTimeout<T>(promise: Promise<T>, timeoutMs = 15000): Promise<T> {
+async function withTimeout<T>(promise: Promise<T>, timeoutMs = 15000, timeoutMessage = "Request timed out"): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
       promise,
       new Promise<T>((_, reject) => {
-        timer = setTimeout(() => reject(new Error(copy[lang].loading)), timeoutMs);
+        timer = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
       }),
     ]);
   } finally {
@@ -143,14 +143,14 @@ export default function Analytics() {
       setDataError("");
       try {
         if (!client) throw new Error(copy[lang].loadError);
-        const { data, error: sessionError } = await withTimeout(client.auth.getSession());
+        const { data, error: sessionError } = await withTimeout(client.auth.getSession(), 15000, t.loading);
         if (sessionError) throw sessionError;
         const sessionUser = data.session?.user;
         if (!sessionUser) {
           if (active) { setShifts([]); setDataState("ready"); }
           return;
         }
-        const rows = await withTimeout(loadUserShifts(sessionUser.id));
+        const rows = await withTimeout(loadUserShifts(sessionUser.id), 15000, t.loading);
         if (!active) return;
         setShifts(rows);
         setDataState("ready");
