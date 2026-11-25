@@ -7,7 +7,7 @@ import { format, isSameMonth, parseISO, startOfMonth, subMonths } from "date-fns
 import {
   Activity, ArrowDownRight, ArrowUpRight, BarChart3, CalendarDays,
   Clock3, Globe2, MapPin, Moon, RefreshCw, Settings2, Sun,
-  TrendingUp, WalletCards, BriefcaseBusiness, ChevronDown,
+  TrendingUp, WalletCards, BriefcaseBusiness, ChevronDown, Target, UserRound,
 } from "lucide-react";
 import { loadUserShifts, syncConnecteamIfConnected } from "@/lib/connecteam-client";
 import { copy, isWorkedShift, Lang, locales, money, Shift } from "@/lib/worklog";
@@ -18,6 +18,7 @@ import { getStoreDisplayName } from "@/lib/stores";
 type Period = 6 | 12;
 type ChartMode = "actual" | "potential";
 type Theme = "light" | "dark";
+type GoalType = "income" | "hours" | null;
 
 const messages = {
   en: {
@@ -38,6 +39,9 @@ const messages = {
     compared: "compared with last month", steady: "No change from last month",
     bestDay: "Busiest day", avgWeek: "Avg. hours / week", incomePerHour: "Average hourly earnings",
     currentPeriod: "Current month", previousPeriod: "Previous month",
+    profile: "Profile", goal: "Monthly goal", actualProgress: "Actual progress", potentialProgress: "Potential progress",
+    setGoal: "Set a monthly goal", noGoal: "Set an income or work-hours target in your profile.",
+    remaining: "remaining", completed: "completed",
   },
   ru: {
     subtitle: "ТВОЯ РАБОТА В ЦИФРАХ", title: "Вся картина твоей работы",
@@ -57,6 +61,9 @@ const messages = {
     compared: "по сравнению с прошлым месяцем", steady: "Без изменений к прошлому месяцу",
     bestDay: "Самый загруженный день", avgWeek: "В среднем часов в неделю", incomePerHour: "Средний заработок в час",
     currentPeriod: "Текущий месяц", previousPeriod: "Прошлый месяц",
+    profile: "Профиль", goal: "Цель на месяц", actualProgress: "Фактическое выполнение", potentialProgress: "Потенциальное выполнение",
+    setGoal: "Установить цель на месяц", noGoal: "Укажи желаемый заработок или количество часов в профиле.",
+    remaining: "осталось", completed: "выполнено",
   },
   cs: {
     subtitle: "VAŠE PRÁCE V ČÍSLECH", title: "Přehled vaší práce",
@@ -76,6 +83,9 @@ const messages = {
     compared: "ve srovnání s minulým měsícem", steady: "Beze změny oproti minulému měsíci",
     bestDay: "Nejvytíženější den", avgWeek: "Průměr hodin týdně", incomePerHour: "Průměrný hodinový výdělek",
     currentPeriod: "Tento měsíc", previousPeriod: "Minulý měsíc",
+    profile: "Profil", goal: "Měsíční cíl", actualProgress: "Skutečné plnění", potentialProgress: "Potenciální plnění",
+    setGoal: "Nastavit měsíční cíl", noGoal: "Nastavte si v profilu cílový výdělek nebo počet hodin.",
+    remaining: "zbývá", completed: "splněno",
   },
 } as const;
 
@@ -130,6 +140,9 @@ export default function Analytics() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [period, setPeriod] = useState<Period>(6);
   const [chartMode, setChartMode] = useState<ChartMode>("actual");
+  const [goalType, setGoalType] = useState<GoalType>(null);
+  const [goalValue, setGoalValue] = useState(0);
+  const [goalMode, setGoalMode] = useState<ChartMode>("actual");
   const t = copy[lang];
   const a = messages[lang];
 
@@ -148,9 +161,16 @@ export default function Analytics() {
         if (error) throw error;
         const user = data.session?.user;
         if (!user) { if (active) { setShifts([]); setDataState("ready"); } return; }
-        const rows = await loadUserShifts(user.id);
+        const [rows, profileResult] = await Promise.all([
+          loadUserShifts(user.id),
+          supabase.from("profiles").select("monthly_goal_type,monthly_goal_value").eq("id", user.id).single(),
+        ]);
+        if (profileResult.error) console.warn("Unable to load monthly goal", profileResult.error);
         if (!active) return;
-        setShifts(rows); setDataState("ready");
+        setShifts(rows);
+        setGoalType(profileResult.data?.monthly_goal_type === "income" || profileResult.data?.monthly_goal_type === "hours" ? profileResult.data.monthly_goal_type : null);
+        setGoalValue(Number(profileResult.data?.monthly_goal_value) || 0);
+        setDataState("ready");
         void syncConnecteamIfConnected()
           .then((result) => result.synced ? loadUserShifts(user.id) : null)
           .then((fresh) => { if (active && fresh) setShifts(fresh); })
@@ -216,8 +236,8 @@ export default function Analytics() {
     <main className={`app-shell ${theme === "dark" ? "theme-dark" : ""}`}>
       <aside className="sidebar">
         <div className="brand"><Image className="brand-logo" src="/yk-logo.png" alt="YK" width={36} height={36} priority/><span className="brand-name">YK WorkLog</span></div>
-        <nav><Link href="/"><CalendarDays/>{t.calendar}</Link><a className="active" aria-current="page"><BarChart3/>{t.analytics}</a></nav>
-        <div className="sidebar-bottom"><Picker lang={lang} setLang={setLang}/><button onClick={() => setTheme(theme === "light" ? "dark" : "light")}>{theme === "light" ? <Moon/> : <Sun/>}{theme === "light" ? t.dark : t.light}</button><button><Settings2/>{t.settings}</button></div>
+        <nav><Link href="/"><CalendarDays/>{t.calendar}</Link><a className="active" aria-current="page"><BarChart3/>{t.analytics}</a><Link href="/profile"><UserRound/>{a.profile}</Link></nav>
+        <div className="sidebar-bottom"><Picker lang={lang} setLang={setLang}/><button onClick={() => setTheme(theme === "light" ? "dark" : "light")}>{theme === "light" ? <Moon/> : <Sun/>}{theme === "light" ? t.dark : t.light}</button><Link href="/profile"><Settings2/>{t.settings}</Link></div>
       </aside>
 
       <section className="content analytics-page analytics-v2">
@@ -229,6 +249,23 @@ export default function Analytics() {
         {dataState === "loading" ? <section className="card data-state-card" aria-live="polite"><span className="spinner"/><strong>{a.loading}</strong></section>
         : dataState === "error" ? <section className="card data-state-card data-state-error" role="alert"><strong>{a.error}</strong><p>{dataError}</p><button className="primary" onClick={() => setReloadKey((value) => value + 1)}><RefreshCw size={16}/>{a.retry}</button></section>
         : <>
+          <section className="card an-goal-card">
+            <div className="an-goal-top">
+              <div><div className="an-kicker"><Target size={14}/>{a.goal}</div><h2>{goalType ? (goalMode === "actual" ? a.actualProgress : a.potentialProgress) : a.setGoal}</h2></div>
+              {goalType && <button type="button" className="an-goal-toggle" onClick={() => setGoalMode((mode) => mode === "actual" ? "potential" : "actual")}>{goalMode === "actual" ? a.actualLabel : a.potentialLabel}<span>↻</span></button>}
+            </div>
+            {goalType && goalValue > 0 ? (() => {
+              const achieved = goalMode === "actual"
+                ? (goalType === "income" ? currentIncome : currentHours)
+                : (goalType === "income" ? potentialIncome : potentialHours);
+              const percent = Math.round(achieved / goalValue * 100);
+              const unit = goalType === "income" ? "" : ` ${a.hoursShort}`;
+              const valueLabel = goalType === "income" ? money(achieved) : `${achieved.toLocaleString(lang)}${unit}`;
+              const targetLabel = goalType === "income" ? money(goalValue) : `${goalValue.toLocaleString(lang)}${unit}`;
+              return <><div className="an-goal-values"><strong>{valueLabel}</strong><span>{targetLabel}</span><b>{percent}%</b></div><div className="an-goal-track" role="progressbar" aria-valuenow={Math.min(percent,100)} aria-valuemin={0} aria-valuemax={100}><i style={{width:`${Math.min(Math.max(percent,0),100)}%`}}/></div><div className="an-goal-foot"><span>{goalType === "income" ? a.earnings : a.hours}</span><span>{Math.max(0, goalValue-achieved).toLocaleString(lang)} {a.remaining}</span></div></>;
+            })() : <div className="an-goal-empty"><p>{a.noGoal}</p><Link href="/profile">{a.setGoal} →</Link></div>}
+          </section>
+
           <section className="an-metrics">
             <Metric icon={<Clock3/>} label={a.hours} value={`${currentHours.toLocaleString(lang)} ${a.hoursShort}`} foot={hoursDelta === null ? a.currentPeriod : `${hoursDelta >= 0 ? "+" : ""}${hoursDelta}% ${a.vsLast}`} trend={hoursDelta}/>
             <Metric icon={<WalletCards/>} label={a.earnings} value={money(currentIncome)} foot={incomeDelta === null ? a.currentPeriod : `${incomeDelta >= 0 ? "+" : ""}${incomeDelta}% ${a.vsLast}`} trend={incomeDelta}/>
@@ -267,7 +304,7 @@ export default function Analytics() {
         </>}
       </section>
 
-      <MobileNav active="analytics" calendar={t.calendar} analytics={t.analytics} settings={t.settings} onSettings={() => setMobileMenu(true)}/>
+      <MobileNav active="analytics" calendar={t.calendar} analytics={t.analytics} profile={a.profile}/>
       {mobileMenu && <div className="overlay mobile-sheet-overlay" onMouseDown={() => setMobileMenu(false)}><section className="mobile-sheet" role="dialog" aria-modal="true" aria-label={t.settings} onMouseDown={(event) => event.stopPropagation()}><span className="sheet-handle"/><div className="mobile-sheet-head"><h2>{t.settings}</h2><button type="button" className="close" onClick={() => setMobileMenu(false)} aria-label={a.close}>×</button></div><div className="mobile-setting-row"><span>{a.theme}</span><button type="button" className="setting-action" onClick={() => setTheme(theme === "light" ? "dark" : "light")}>{theme === "light" ? <Moon/> : <Sun/>}{theme === "light" ? t.dark : t.light}</button></div><div className="mobile-setting-row"><span>{a.language}</span><Picker lang={lang} setLang={setLang}/></div></section></div>}
     </main>
   );
