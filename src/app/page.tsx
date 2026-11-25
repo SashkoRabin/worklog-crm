@@ -16,6 +16,7 @@ import {
 } from "date-fns";
 import {
   BarChart3,
+  UserRound,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -491,6 +492,10 @@ export default function Home() {
             <BarChart3 />
             {t.analytics}
           </Link>
+          <Link href="/profile">
+            <UserRound />
+            {lang === "ru" ? "Профиль" : lang === "cs" ? "Profil" : "Profile"}
+          </Link>
         </nav>
         <div className="sidebar-bottom">
           <LangPicker lang={lang} setLang={setLang} />
@@ -698,9 +703,7 @@ export default function Home() {
                 {t.defaultRate}: {money(rate)}/h
               </p>
             </div>
-            <button className="link" onClick={() => setDialog("settings")}>
-              {t.changeRate}
-            </button>
+
           </div>
           {upcomingShifts.length ? (
             upcomingShifts.slice(0, 5).map((group) => {
@@ -746,8 +749,7 @@ export default function Home() {
         active="calendar"
         calendar={t.calendar}
         analytics={t.analytics}
-        settings={t.settings}
-        onSettings={() => setDialog("quick")}
+        profile={lang === "ru" ? "Профиль" : lang === "cs" ? "Profil" : "Profile"}
       />
       {dialog === "quick" && (
         <div className="overlay mobile-sheet-overlay" onMouseDown={() => setDialog(null)}>
@@ -780,9 +782,9 @@ export default function Home() {
               <span>{t.language}</span>
               <LangPicker lang={lang} setLang={setLang} />
             </div>
-            <button type="button" className="setting-link" onClick={() => setDialog("settings")}>
-              {t.changeRate}
-            </button>
+            <Link href="/profile" className="setting-link">
+              {lang === "ru" ? "Профиль" : lang === "cs" ? "Profil" : "Profile"}
+            </Link>
             <Link href="/telegram" className="setting-link">
               Telegram Assistant
             </Link>
@@ -815,10 +817,6 @@ export default function Home() {
               <label>
                 {profileText[lang].name} <span className="subtle">{profileText[lang].nameHint}</span>
                 <input name="name" type="text" maxLength={80} defaultValue={name} />
-              </label>
-              <label>
-                {t.rate}
-                <input name="rate" type="number" min="0" defaultValue={rate} />
               </label>
               <Link href="/telegram" className="connecteam-cta">
                 <span className="connecteam-cta-icon"><Send /></span>
