@@ -20,7 +20,7 @@ const text = {
     goalType: "I want to", incomeGoal: "Earn money", hoursGoal: "Work hours", amount: "Target",
     save: "Save changes", saving: "Saving…", saved: "Profile saved", load: "Loading profile…",
     loadError: "Could not load your profile", saveError: "Could not save your profile. Try again.",
-    login: "Sign in to manage your profile", calendar: "Calendar", analytics: "Analytics", profile: "Profile",
+    login: "Sign in to manage your profile", signIn: "Sign in", calendar: "Calendar", analytics: "Analytics", profile: "Profile",
     estimateHours: "You need to work approximately", estimateEarn: "At this target, you would earn approximately",
     hours: "hours", clearGoal: "No monthly goal", theme: "Appearance", language: "Language", dark: "Dark mode", light: "Light mode",
     invalid: "Enter a value greater than zero.", currency: "CZK",
@@ -33,7 +33,7 @@ const text = {
     goalType: "Я хочу", incomeGoal: "Заработать", hoursGoal: "Отработать часов", amount: "Целевое значение",
     save: "Сохранить изменения", saving: "Сохранение…", saved: "Профиль сохранён", load: "Загружаем профиль…",
     loadError: "Не удалось загрузить профиль", saveError: "Не удалось сохранить профиль. Попробуй ещё раз.",
-    login: "Войди в аккаунт, чтобы управлять профилем", calendar: "Календарь", analytics: "Аналитика", profile: "Профиль",
+    login: "Войди в аккаунт, чтобы управлять профилем", signIn: "Войти", calendar: "Календарь", analytics: "Аналитика", profile: "Профиль",
     estimateHours: "Для этой цели нужно отработать примерно", estimateEarn: "При такой цели по часам заработок составит примерно",
     hours: "часов", clearGoal: "Без месячной цели", theme: "Оформление", language: "Язык", dark: "Тёмная тема", light: "Светлая тема",
     invalid: "Введи значение больше нуля.", currency: "Kč",
@@ -46,7 +46,7 @@ const text = {
     goalType: "Chci", incomeGoal: "Vydělat", hoursGoal: "Odpracovat hodin", amount: "Cílová hodnota",
     save: "Uložit změny", saving: "Ukládání…", saved: "Profil uložen", load: "Načítání profilu…",
     loadError: "Profil se nepodařilo načíst", saveError: "Profil se nepodařilo uložit. Zkuste to znovu.",
-    login: "Pro správu profilu se přihlaste", calendar: "Kalendář", analytics: "Analytika", profile: "Profil",
+    login: "Pro správu profilu se přihlaste", signIn: "Přihlásit se", calendar: "Kalendář", analytics: "Analytika", profile: "Profil",
     estimateHours: "Pro dosažení cíle musíte odpracovat přibližně", estimateEarn: "Při tomto počtu hodin vyděláte přibližně",
     hours: "hodin", clearGoal: "Bez měsíčního cíle", theme: "Vzhled", language: "Jazyk", dark: "Tmavý režim", light: "Světlý režim",
     invalid: "Zadejte hodnotu větší než nula.", currency: "Kč",
@@ -166,7 +166,7 @@ export default function ProfilePage() {
         </header>
         {status === "loading" ? <section className="card profile-state"><LoaderCircle className="spin"/>{t.load}</section>
         : status === "error" ? <section className="card profile-state" role="alert">{t.loadError}<small>{error}</small></section>
-        : !userId ? <section className="card profile-state"><p>{t.login}</p><Link className="primary" href="/login">Sign in</Link></section>
+        : !userId ? <section className="card profile-state"><p>{t.login}</p><Link className="primary" href="/login">{t.signIn}</Link></section>
         : <form className="profile-layout" onSubmit={save}>
           <section className="card profile-card">
             <div className="profile-card-heading"><span className="an-icon"><UserRound/></span><div><h2>{t.personal}</h2><p>{email}</p></div></div>
