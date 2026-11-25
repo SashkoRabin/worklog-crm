@@ -59,13 +59,13 @@ const profileText = {
 
 const current = new Date(),
   today = format(current, "yyyy-MM-dd");
-async function withTimeout<T>(promise: Promise<T>, timeoutMs = 15000): Promise<T> {
+async function withTimeout<T>(promise: Promise<T>, timeoutMs = 15000, timeoutMessage = "Request timed out"): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
       promise,
       new Promise<T>((_, reject) => {
-        timer = setTimeout(() => reject(new Error(t.loading)), timeoutMs);
+        timer = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
       }),
     ]);
   } finally {
@@ -192,7 +192,7 @@ export default function Home() {
       setDataError("");
       try {
         if (!client) throw new Error(t.loadError);
-        const { data, error: sessionError } = await withTimeout(client.auth.getSession());
+        const { data, error: sessionError } = await withTimeout(client.auth.getSession(), 15000, t.loading);
         if (sessionError) throw sessionError;
         const sessionUser = data.session?.user;
         if (!sessionUser) {
@@ -206,7 +206,7 @@ export default function Home() {
         const [profileResult, rows] = await withTimeout(Promise.all([
           client.from("profiles").select("hourly_rate,display_name").eq("id", sessionUser.id).single(),
           loadUserShifts(sessionUser.id),
-        ]));
+        ]), 15000, t.loading);
         if (profileResult.error) console.warn("Unable to load profile settings", profileResult.error);
         if (!active) return;
         setShifts(rows);
@@ -865,7 +865,7 @@ function ConnecteamDialog({
       .then(async (response) => {
         const data = await response.json();
         if (data.code === "SETUP_REQUIRED") throw new Error("CONNECTEAM_SETUP_REQUIRED");
-        if (!response.ok) throw new Error(data.error || lang === "ru" ? "Не удалось проверить подключение Connecteam." : lang === "cs" ? "Nepodařilo se ověřit připojení Connecteam." : "Unable to check Connecteam connection.");
+        if (!response.ok) throw new Error(data.error || (lang === "ru" ? "Не удалось проверить подключение Connecteam." : lang === "cs" ? "Nepodařilo se ověřit připojení Connecteam." : "Unable to check Connecteam connection."));
         if (data.connected) {
           setConnected(true);
           setLastSynced(data.lastSyncedAt);
