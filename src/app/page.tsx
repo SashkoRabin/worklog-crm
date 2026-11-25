@@ -445,7 +445,7 @@ export default function Home() {
   async function saveSettings(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const values = new FormData(event.currentTarget),
-      nextRate = Number(values.get("rate")),
+      nextRate = rate,
       nextName = String(values.get("name") || "").trim();
     if (supabase && user) {
       const { error } = await supabase.from("profiles").upsert({
