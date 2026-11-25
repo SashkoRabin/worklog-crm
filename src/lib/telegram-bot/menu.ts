@@ -13,7 +13,7 @@ export function menuKeyboard(lang: Lang, enabled: boolean, needsShifts = false) 
       [{ text: t.guideMenu }, { text: t.scheduleMenu }],
       [{ text: t.earnings }],
       [{ text: lang === "ru" ? (needsShifts ? "🆘 Нужны смены (отменить)" : "🆘 Нужны смены") : lang === "cs" ? (needsShifts ? "🆘 Potřebuji směny (zrušit)" : "🆘 Potřebuji směny") : (needsShifts ? "🆘 Need shifts (cancel)" : "🆘 Need shifts") }],
-      [{ text: "👥 Сотрудники" }],
+      [{ text: t.staffMenu }],
       [{ text: enabled ? t.remindersOn : t.remindersOff }],
     ],
     resize_keyboard: true,
