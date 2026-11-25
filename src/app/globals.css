@@ -2480,3 +2480,48 @@ h2 {
   .salary-history-numbers { grid-column:1; grid-row:2; display:flex; flex-wrap:wrap; gap:9px; }
   .salary-history-debt { grid-column:2; grid-row:1/3; }
 }
+
+
+/* Compact collapsible profile sections */
+.section-heading-toggle {
+  display:flex;
+  width:100%;
+  align-items:center;
+  gap:13px;
+  padding:0;
+  border:0;
+  color:inherit;
+  background:transparent;
+  text-align:left;
+  cursor:pointer;
+}
+.section-heading-toggle>div { flex:1; min-width:0; }
+.section-heading-toggle .section-chevron,
+.section-toggle svg { flex:0 0 auto; transition:transform .2s ease; }
+.section-heading-toggle[aria-expanded="true"] .section-chevron,
+.section-toggle[aria-expanded="true"] svg { transform:rotate(180deg); }
+.section-toggle { display:grid; place-items:center; width:40px; height:40px; flex:0 0 auto; border:1px solid var(--border,#e5e0ed); border-radius:11px; color:var(--muted,#81798e); background:transparent; cursor:pointer; }
+.section-heading-toggle:focus-visible,.section-toggle:focus-visible { outline:2px solid #8068f4; outline-offset:4px; border-radius:10px; }
+.profile-card:has(.section-heading-toggle) { min-width:0; }
+.salary-overview-head { align-items:flex-start; }
+.salary-overview-head>div:first-child { min-width:0; }
+.salary-head-actions { display:flex; align-items:center; gap:9px; flex:0 0 auto; }
+.salary-collapsed-value { display:flex; align-items:baseline; flex-wrap:wrap; gap:8px; margin-top:13px; }
+.salary-collapsed-value span { color:#898398; font-size:10px; font-weight:750; }
+.salary-collapsed-value strong { color:#302747; font-size:20px; font-weight:850; font-variant-numeric:tabular-nums; }
+.salary-collapsed-value small { color:#91899f; font-size:10px; }
+.salary-expanded-content { margin-top:18px; }
+.salary-toggle[aria-expanded="true"] { color:#8068f4; border-color:#8068f4; background:rgba(128,104,244,.08); }
+.theme-dark .salary-collapsed-value span,.theme-dark .salary-collapsed-value small { color:#aaa2b9; }
+.theme-dark .salary-collapsed-value strong { color:#f0edf8; }
+.theme-dark .section-toggle { border-color:#494252; color:#aaa2b9; }
+.theme-dark .salary-toggle[aria-expanded="true"] { border-color:#8068f4; color:#a994ff; }
+@media(max-width:700px) {
+  .salary-overview-head { flex-direction:row; }
+  .salary-head-actions { flex-direction:column-reverse; align-items:stretch; }
+  .salary-head-actions .salary-month-select { align-self:auto; }
+  .salary-toggle { align-self:flex-end; }
+  .salary-collapsed-value { gap:6px; }
+  .salary-collapsed-value strong { font-size:18px; }
+  .section-heading-toggle .section-chevron { width:17px; }
+}
