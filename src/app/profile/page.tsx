@@ -7,7 +7,7 @@ import { format, parseISO } from "date-fns";
 import { enUS, ru, cs } from "date-fns/locale";
 import { loadUserShifts } from "@/lib/connecteam-client";
 import type { Shift } from "@/lib/worklog";
-import { ArrowLeft, Moon, Sun, UserRound, Target, Globe2, Save, LoaderCircle, CalendarDays, BarChart3, Trash2, WalletCards, CheckCircle2, Plus, CalendarClock, TrendingUp, CircleDollarSign } from "lucide-react";
+import { ArrowLeft, Moon, Sun, UserRound, Target, Globe2, Save, LoaderCircle, CalendarDays, BarChart3, Trash2, ChevronDown, WalletCards, CheckCircle2, Plus, CalendarClock, TrendingUp, CircleDollarSign } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Lang, money } from "@/lib/worklog";
 import { MobileNav } from "@/components/mobile-nav";
@@ -20,7 +20,7 @@ type MonthSalary = { month: string; earned: number; received: number; unpaid: nu
 
 const text = {
   en: {
-    salary:"My salary",salaryDescription:"Track what you earned, what you received and what is still owed.",earnedSalary:"Earned",receivedSalary:"Received",unpaidSalary:"Still owed",recordPayment:"Record payment",paymentAmount:"Amount received",paymentDate:"Payment date",addPayment:"Add payment",receivedButton:"Received",settleHint:"Mark the outstanding balance as paid and add it to your received total.",noDebt:"Nothing outstanding. Your salary is up to date.",paymentHistory:"Monthly history",paymentLog:"Payment dates",noPaymentsMonth:"No payments recorded for this month.",noHistory:"No salary history yet.",month:"Month",paidOn:"Paid",totalOwed:"Total still owed",paymentSaved:"Payment recorded",paymentSettled:"Outstanding balance marked as received",paymentError:"Could not save payment. Apply the salary payments migration first.",paymentInvalid:"Enter an amount greater than zero.",
+    expand:"Expand section",collapse:"Collapse section",salary:"My salary",salaryDescription:"Track what you earned, what you received and what is still owed.",earnedSalary:"Earned",receivedSalary:"Received",unpaidSalary:"Still owed",recordPayment:"Record payment",paymentAmount:"Amount received",paymentDate:"Payment date",addPayment:"Add payment",receivedButton:"Received",settleHint:"Mark the outstanding balance as paid and add it to your received total.",noDebt:"Nothing outstanding. Your salary is up to date.",paymentHistory:"Monthly history",paymentLog:"Payment dates",noPaymentsMonth:"No payments recorded for this month.",noHistory:"No salary history yet.",month:"Month",paidOn:"Paid",totalOwed:"Total still owed",paymentSaved:"Payment recorded",paymentSettled:"Outstanding balance marked as received",paymentError:"Could not save payment. Apply the salary payments migration first.",paymentInvalid:"Enter an amount greater than zero.",
     eyebrow:"YOUR ACCOUNT",title:"Profile",description:"Manage your hourly rate and monthly target.",
     rate:"Hourly rate",rateHint:"Your default rate for new shifts. Existing shifts keep their saved rate.",
     saveRate:"Save rate",saving:"Saving…",saved:"Saved",rateError:"Could not save hourly rate. Please try again.",
@@ -36,7 +36,7 @@ const text = {
     fallback:"Your settings are ready. Existing profile values will appear after the profile record is available.",
   },
   ru: {
-    salary:"Моя зарплата",salaryDescription:"Контролируй начисления, полученные деньги и оставшуюся задолженность.",earnedSalary:"Начислено",receivedSalary:"Получено",unpaidSalary:"Не выдано",recordPayment:"Записать выплату",paymentAmount:"Сколько получил",paymentDate:"Дата получки",addPayment:"Добавить выплату",receivedButton:"Получил",settleHint:"Подтверди получение остатка. Сумма добавится к полученным деньгам.",noDebt:"Задолженности нет. Зарплата выплачена полностью.",paymentHistory:"История по месяцам",paymentLog:"Даты выплат",noPaymentsMonth:"В этом месяце выплат пока не было.",noHistory:"Истории выплат пока нет.",month:"Месяц",paidOn:"Получено",totalOwed:"Всего должны",paymentSaved:"Выплата записана",paymentSettled:"Остаток отмечен как полученный",paymentError:"Не удалось сохранить выплату. Сначала примени миграцию зарплат.",paymentInvalid:"Введи сумму больше нуля.",
+    expand:"Развернуть раздел",collapse:"Свернуть раздел",salary:"Моя зарплата",salaryDescription:"Контролируй начисления, полученные деньги и оставшуюся задолженность.",earnedSalary:"Начислено",receivedSalary:"Получено",unpaidSalary:"Не выдано",recordPayment:"Записать выплату",paymentAmount:"Сколько получил",paymentDate:"Дата получки",addPayment:"Добавить выплату",receivedButton:"Получил",settleHint:"Подтверди получение остатка. Сумма добавится к полученным деньгам.",noDebt:"Задолженности нет. Зарплата выплачена полностью.",paymentHistory:"История по месяцам",paymentLog:"Даты выплат",noPaymentsMonth:"В этом месяце выплат пока не было.",noHistory:"Истории выплат пока нет.",month:"Месяц",paidOn:"Получено",totalOwed:"Всего должны",paymentSaved:"Выплата записана",paymentSettled:"Остаток отмечен как полученный",paymentError:"Не удалось сохранить выплату. Сначала примени миграцию зарплат.",paymentInvalid:"Введи сумму больше нуля.",
     eyebrow:"ТВОЙ АККАУНТ",title:"Профиль",description:"Управляй почасовой ставкой и целью на месяц.",
     rate:"Почасовая ставка",rateHint:"Ставка по умолчанию для новых смен. У существующих смен сохраняется прежняя ставка.",
     saveRate:"Сохранить ставку",saving:"Сохранение…",saved:"Сохранено",rateError:"Не удалось сохранить ставку. Попробуй ещё раз.",
@@ -52,7 +52,7 @@ const text = {
     fallback:"Настройки доступны. Сохранённые значения появятся, когда запись профиля станет доступна.",
   },
   cs: {
-    salary:"Moje výplata",salaryDescription:"Sledujte výdělek, přijaté peníze a zbývající dlužnou částku.",earnedSalary:"Vyděláno",receivedSalary:"Vyplaceno",unpaidSalary:"Zbývá vyplatit",recordPayment:"Zaznamenat výplatu",paymentAmount:"Přijatá částka",paymentDate:"Datum výplaty",addPayment:"Přidat výplatu",receivedButton:"Přijato",settleHint:"Potvrďte přijetí zbývající částky a přičtěte ji k vyplaceným penězům.",noDebt:"Žádný nedoplatek. Výplata je kompletní.",paymentHistory:"Měsíční historie",paymentLog:"Data výplat",noPaymentsMonth:"Tento měsíc zatím nebyly zaznamenány žádné výplaty.",noHistory:"Zatím žádná historie výplat.",month:"Měsíc",paidOn:"Vyplaceno",totalOwed:"Celkem dluženo",paymentSaved:"Výplata zaznamenána",paymentSettled:"Zbývající částka byla označena jako vyplacená",paymentError:"Výplatu se nepodařilo uložit. Nejprve použijte migraci výplat.",paymentInvalid:"Zadejte částku větší než nula.",
+    expand:"Rozbalit sekci",collapse:"Sbalit sekci",salary:"Moje výplata",salaryDescription:"Sledujte výdělek, přijaté peníze a zbývající dlužnou částku.",earnedSalary:"Vyděláno",receivedSalary:"Vyplaceno",unpaidSalary:"Zbývá vyplatit",recordPayment:"Zaznamenat výplatu",paymentAmount:"Přijatá částka",paymentDate:"Datum výplaty",addPayment:"Přidat výplatu",receivedButton:"Přijato",settleHint:"Potvrďte přijetí zbývající částky a přičtěte ji k vyplaceným penězům.",noDebt:"Žádný nedoplatek. Výplata je kompletní.",paymentHistory:"Měsíční historie",paymentLog:"Data výplat",noPaymentsMonth:"Tento měsíc zatím nebyly zaznamenány žádné výplaty.",noHistory:"Zatím žádná historie výplat.",month:"Měsíc",paidOn:"Vyplaceno",totalOwed:"Celkem dluženo",paymentSaved:"Výplata zaznamenána",paymentSettled:"Zbývající částka byla označena jako vyplacená",paymentError:"Výplatu se nepodařilo uložit. Nejprve použijte migraci výplat.",paymentInvalid:"Zadejte částku větší než nula.",
     eyebrow:"VÁŠ ÚČET",title:"Profil",description:"Spravujte hodinovou sazbu a měsíční cíl.",
     rate:"Hodinová sazba",rateHint:"Výchozí sazba pro nové směny. Starší směny si zachovají uloženou sazbu.",
     saveRate:"Uložit sazbu",saving:"Ukládání…",saved:"Uloženo",rateError:"Hodinovou sazbu se nepodařilo uložit. Zkuste to znovu.",
@@ -93,6 +93,9 @@ export default function ProfilePage() {
   const [profileFallback,setProfileFallback]=useState(false);
   const [shifts,setShifts]=useState<Shift[]>([]);
   const [payments,setPayments]=useState<SalaryPayment[]>([]);
+  const [expandedSections,setExpandedSections]=useState<string[]>([]);
+  const toggleSection=(section:string)=>setExpandedSections(current=>current.includes(section)?current.filter(item=>item!==section):[...current,section]);
+  const isExpanded=(section:string)=>expandedSections.includes(section);
   const [paymentAmount,setPaymentAmount]=useState("");
   const [paymentDate,setPaymentDate]=useState(()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");});
   const [paymentState,setPaymentState]=useState<SaveState>("idle");
@@ -249,9 +252,10 @@ export default function ProfilePage() {
       :<div className="profile-layout">
         <section className="salary-overview">
           <div className="salary-overview-head">
-            <div><div className="salary-kicker"><WalletCards size={15}/>{t.salary}</div><h2>{monthLabel(selectedSalaryMonth)}</h2><p>{t.salaryDescription}</p></div>
-            <label className="salary-month-select"><CalendarClock size={16}/><select aria-label={t.month} value={selectedSalaryMonth} onChange={e=>{setSelectedSalaryMonth(e.target.value);setPaymentNotice("");setPaymentError("");}}>{monthSummaries.map(row=><option key={row.month} value={row.month}>{monthLabel(row.month)}</option>)}</select></label>
+            <div><div className="salary-kicker"><WalletCards size={15}/>{t.salary}</div><h2>{monthLabel(selectedSalaryMonth)}</h2><p>{t.salaryDescription}</p><div className="salary-collapsed-value"><span>{t.unpaidSalary}</span><strong>{money(selectedSalary?.unpaid||0)}</strong><small>{t.totalOwed}: {money(totalOwed)}</small></div></div>
+            <div className="salary-head-actions"><label className="salary-month-select"><CalendarClock size={16}/><select aria-label={t.month} value={selectedSalaryMonth} onChange={e=>{setSelectedSalaryMonth(e.target.value);setPaymentNotice("");setPaymentError("");}}>{monthSummaries.map(row=><option key={row.month} value={row.month}>{monthLabel(row.month)}</option>)}</select></label><button type="button" className="section-toggle salary-toggle" aria-expanded={isExpanded("salary")} aria-label={isExpanded("salary")?t.collapse:t.expand} onClick={()=>toggleSection("salary")}><ChevronDown size={17}/></button></div>
           </div>
+          {isExpanded("salary")&&<div className="salary-expanded-content">
           <div className="salary-main-number"><span>{t.unpaidSalary}</span><strong>{money(selectedSalary?.unpaid||0)}</strong><small>{t.totalOwed}: {money(totalOwed)}</small></div>
           <div className="salary-stats">
             <div><span><TrendingUp size={14}/>{t.earnedSalary}</span><strong>{money(selectedSalary?.earned||0)}</strong></div>
@@ -280,19 +284,25 @@ export default function ProfilePage() {
               <span className={`salary-history-debt ${row.unpaid>0?"has-debt":""}`}>{row.unpaid>0?money(row.unpaid):"✓"}</span>
             </button>)}
           </div>
+          </div>}
         </section>
         <section className="card profile-card">
-          <div className="profile-card-heading"><span className="an-icon"><UserRound/></span><div><h2>{t.personal}</h2><p>{email}</p></div></div>
+          <button type="button" className="profile-card-heading section-heading-toggle" aria-expanded={isExpanded("personal")} onClick={()=>toggleSection("personal")}><span className="an-icon"><UserRound/></span><div><h2>{t.personal}</h2><p>{email}</p></div><ChevronDown className="section-chevron" size={18}/></button>
+          {isExpanded("personal")&&<>
           <label className="profile-field">{t.name}<small>{t.nameHint}</small><input value={name} maxLength={80} onChange={e=>setName(e.target.value)} placeholder={t.name}/></label>
           <button type="button" className="primary profile-save" onClick={saveName}><Save size={16}/>{t.saveName}</button>
+          </>}
         </section>
         <section className="card profile-card">
-          <div className="profile-card-heading"><span className="an-icon"><UserRound/></span><div><h2>{t.rate}</h2><p>{t.rateHint}</p></div></div>
+          <button type="button" className="profile-card-heading section-heading-toggle" aria-expanded={isExpanded("rate")} onClick={()=>toggleSection("rate")}><span className="an-icon"><UserRound/></span><div><h2>{t.rate}</h2><p>{t.rateHint}</p></div><ChevronDown className="section-chevron" size={18}/></button>
+          {isExpanded("rate")&&<>
           <label className="profile-field">{t.rate}<div className="profile-input-with-unit"><input type="number" min="0" step="1" value={rate} onChange={e=>{setRate(e.target.value);setRateState("idle");}} required/><span>{t.currency} / h</span></div></label>
           <button type="button" className="primary profile-save" onClick={saveRate} disabled={rateState==="saving"}><Save size={16}/>{rateState==="saving"?t.saving:rateState==="saved"?t.saved:t.saveRate}</button>
+          </>}
         </section>
         <section className="card profile-card profile-goal-card">
-          <div className="profile-card-heading"><span className="an-icon"><Target/></span><div><h2>{t.goal}</h2><p>{t.goalHint}</p></div></div>
+          <button type="button" className="profile-card-heading section-heading-toggle" aria-expanded={isExpanded("goal")} onClick={()=>toggleSection("goal")}><span className="an-icon"><Target/></span><div><h2>{t.goal}</h2><p>{t.goalHint}</p></div><ChevronDown className="section-chevron" size={18}/></button>
+          {isExpanded("goal")&&<>
           <label className="profile-field">{t.goalType}
             <select value={goalType} onChange={e=>{setGoalType(e.target.value as GoalType);setGoalValue("");setGoalState("idle");setError("");}}>
               <option value="">{t.noGoal}</option><option value="income">{t.incomeGoal}</option><option value="hours">{t.hoursGoal}</option>
@@ -305,6 +315,7 @@ export default function ProfilePage() {
             {(hasGoal||goalType||goalValue)&&<button type="button" className="profile-delete-goal" onClick={deleteGoal} disabled={goalState==="saving"}><Trash2 size={15}/>{t.deleteGoal}</button>}
             {!goalType&&<p className="profile-no-goal">{t.noGoal}</p>}
           </div>
+          </>}
         </section>
         {profileFallback&&<p className="profile-fallback-note">{t.fallback}</p>}
         {(error||notice)&&<div className={error?"profile-error":"profile-notice"} role={error?"alert":"status"}>{error||notice}</div>}
