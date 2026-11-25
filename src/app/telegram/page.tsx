@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Lang } from "@/lib/worklog";
+import { Globe2 } from "lucide-react";
 import { ArrowLeft, Bell, BellOff, Check, CheckCircle2, Clock3, ExternalLink, LoaderCircle, RefreshCw, ShieldCheck, Unlink } from "lucide-react";
 
 type State = { connected: boolean; account: null | { language: string; remindersEnabled: boolean; reminderMinutes: number; timezone: string; linkedAt: string | null } };
@@ -98,6 +99,7 @@ export default function TelegramSettingsPage() {
       <div className="mx-auto w-full max-w-5xl">
         <Link href="/" className={`mb-7 inline-flex min-h-10 items-center gap-2 rounded-lg text-sm transition hover:opacity-70 ${muted}`}><ArrowLeft size={17}/>{t.back}</Link>
         <header className="mb-7 grid gap-4 border-b border-[var(--line)] pb-7 sm:grid-cols-[minmax(0,1fr)_minmax(240px,0.85fr)] sm:items-end sm:gap-8">
+          <label className={`absolute right-4 top-5 sm:right-7 sm:top-8 inline-flex items-center gap-2 text-xs ${muted}`}><Globe2 size={15}/><select aria-label="Language" value={lang} onChange={event=>{const value=event.target.value as Lang;setLang(value);localStorage.setItem("worklog-lang",value);}} className={`rounded-lg border px-2 py-1 ${field}`}><option value="en">English</option><option value="cs">Čeština</option><option value="ru">Русский</option></select></label>
           <div><p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#8069ed]">{t.integrations}</p><h1 className="text-[32px] font-semibold leading-tight tracking-[-0.045em] sm:text-[38px]">Telegram</h1><p className={`mt-1 text-lg font-medium tracking-tight ${muted}`}>{t.subtitle}</p></div>
           <p className={`max-w-md text-sm leading-6 sm:pb-1 ${muted}`}>{t.intro}</p>
         </header>
