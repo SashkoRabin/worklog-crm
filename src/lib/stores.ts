@@ -7,6 +7,14 @@ export type Store = {
 
 export const stores: Store[] = [
   {
+    id: "sklad",
+    name: "Склад",
+    hours: 8,
+    shifts: [
+      { label: "День", start: "10:00", end: "18:00", hours: 8 },
+    ],
+  },
+  {
     id: "narodni",
     name: "Narodni",
     hours: 7.5,
