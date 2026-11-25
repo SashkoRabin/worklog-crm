@@ -247,6 +247,36 @@ export default function ProfilePage() {
       {loading?<section className="card profile-state"><LoaderCircle className="spin"/>{t.load}</section>
       :!userId?<section className="card profile-state"><p>{t.login}</p><Link className="primary" href="/login">{t.signIn}</Link></section>
       :<div className="profile-layout">
+        <section className="salary-overview">
+          <div className="salary-overview-head">
+            <div><div className="salary-kicker"><WalletCards size={15}/>{t.salary}</div><h2>{monthLabel(selectedSalaryMonth)}</h2><p>{t.salaryDescription}</p></div>
+            <label className="salary-month-select"><CalendarClock size={16}/><select aria-label={t.month} value={selectedSalaryMonth} onChange={e=>{setSelectedSalaryMonth(e.target.value);setPaymentNotice("");setPaymentError("");}}>{monthSummaries.map(row=><option key={row.month} value={row.month}>{monthLabel(row.month)}</option>)}</select></label>
+          </div>
+          <div className="salary-main-number"><span>{t.unpaidSalary}</span><strong>{money(selectedSalary?.unpaid||0)}</strong><small>{t.totalOwed}: {money(totalOwed)}</small></div>
+          <div className="salary-stats">
+            <div><span><TrendingUp size={14}/>{t.earnedSalary}</span><strong>{money(selectedSalary?.earned||0)}</strong></div>
+            <div><span><CheckCircle2 size={14}/>{t.receivedSalary}</span><strong>{money(selectedSalary?.received||0)}</strong></div>
+          </div>
+          <div className="salary-payment-form">
+            <div className="salary-form-title"><CircleDollarSign size={17}/><strong>{t.recordPayment}</strong></div>
+            <div className="salary-form-fields">
+              <label>{t.paymentAmount}<div className="salary-money-input"><input type="number" min="0.01" step="0.01" value={paymentAmount} onChange={e=>setPaymentAmount(e.target.value)} placeholder="0"/><span>Kč</span></div></label>
+              <label>{t.paymentDate}<input type="date" value={paymentDate} onChange={e=>setPaymentDate(e.target.value)}/></label>
+              <button type="button" className="primary salary-add-button" onClick={recordPartialPayment} disabled={paymentState==="saving"||!paymentAmount}><Plus size={16}/>{paymentState==="saving"?t.saving:t.addPayment}</button>
+            </div>
+            <div className="salary-settle-row"><div><strong>{t.receivedButton}</strong><span>{t.settleHint}</span></div><button type="button" className="salary-settle-button" onClick={settleOutstanding} disabled={paymentState==="saving"||!selectedSalary?.unpaid}><CheckCircle2 size={16}/>{t.receivedButton}</button></div>
+            {selectedSalary?.unpaid===0&&<p className="salary-no-debt"><CheckCircle2 size={15}/>{t.noDebt}</p>}
+            {(paymentError||paymentNotice)&&<p className={paymentError?"salary-error":"salary-notice"} role={paymentError?"alert":"status"}>{paymentError?t.paymentError:paymentNotice}</p>}
+          </div>
+          <div className="salary-history">
+            <div className="salary-history-heading"><h3>{t.paymentHistory}</h3><span>{monthSummaries.length} {t.month.toLowerCase()}</span></div>
+            {monthSummaries.length===1&&monthSummaries[0].earned===0&&monthSummaries[0].received===0?<p className="salary-empty">{t.noHistory}</p>:monthSummaries.map(row=><button type="button" className={`salary-history-row ${row.month===selectedSalaryMonth?"selected":""}`} key={row.month} onClick={()=>{setSelectedSalaryMonth(row.month);setPaymentNotice("");setPaymentError("");}}>
+              <span className="salary-history-month"><strong>{monthLabel(row.month)}</strong>{row.lastPaidAt&&<small>{t.paidOn}: {dateLabel(row.lastPaidAt)}</small>}</span>
+              <span className="salary-history-numbers"><small>{t.earnedSalary}: {money(row.earned)}</small><small>{t.receivedSalary}: {money(row.received)}</small></span>
+              <span className={`salary-history-debt ${row.unpaid>0?"has-debt":""}`}>{row.unpaid>0?money(row.unpaid):"✓"}</span>
+            </button>)}
+          </div>
+        </section>
         <section className="card profile-card">
           <div className="profile-card-heading"><span className="an-icon"><UserRound/></span><div><h2>{t.personal}</h2><p>{email}</p></div></div>
           <label className="profile-field">{t.name}<small>{t.nameHint}</small><input value={name} maxLength={80} onChange={e=>setName(e.target.value)} placeholder={t.name}/></label>
