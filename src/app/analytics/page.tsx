@@ -41,7 +41,7 @@ const messages = {
     currentPeriod: "Current month", previousPeriod: "Previous month",
     profile: "Profile", goal: "Monthly goal", actualProgress: "Actual progress", potentialProgress: "Potential progress",
     setGoal: "Set a monthly goal", noGoal: "Set an income or work-hours target in your profile.",
-    remaining: "remaining", completed: "completed",
+    remaining: "remaining", completed: "completed", shiftsLeft: "full shifts left (7h each)",
   },
   ru: {
     subtitle: "ТВОЯ РАБОТА В ЦИФРАХ", title: "Вся картина твоей работы",
@@ -63,7 +63,7 @@ const messages = {
     currentPeriod: "Текущий месяц", previousPeriod: "Прошлый месяц",
     profile: "Профиль", goal: "Цель на месяц", actualProgress: "Фактическое выполнение", potentialProgress: "Потенциальное выполнение",
     setGoal: "Установить цель на месяц", noGoal: "Укажи желаемый заработок или количество часов в профиле.",
-    remaining: "осталось", completed: "выполнено",
+    remaining: "осталось", completed: "выполнено", shiftsLeft: "полных смен осталось (по 7 ч)",
   },
   cs: {
     subtitle: "VAŠE PRÁCE V ČÍSLECH", title: "Přehled vaší práce",
@@ -85,7 +85,7 @@ const messages = {
     currentPeriod: "Tento měsíc", previousPeriod: "Minulý měsíc",
     profile: "Profil", goal: "Měsíční cíl", actualProgress: "Skutečné plnění", potentialProgress: "Potenciální plnění",
     setGoal: "Nastavit měsíční cíl", noGoal: "Nastavte si v profilu cílový výdělek nebo počet hodin.",
-    remaining: "zbývá", completed: "splněno",
+    remaining: "zbývá", completed: "splněno", shiftsLeft: "celých směn zbývá (7 h každá)",
   },
 } as const;
 
@@ -142,6 +142,7 @@ export default function Analytics() {
   const [chartMode, setChartMode] = useState<ChartMode>("actual");
   const [goalType, setGoalType] = useState<GoalType>(null);
   const [goalValue, setGoalValue] = useState(0);
+  const [hourlyRate, setHourlyRate] = useState(150);
   const [goalMode, setGoalMode] = useState<ChartMode>("actual");
   const t = copy[lang];
   const a = messages[lang];
@@ -163,13 +164,14 @@ export default function Analytics() {
         if (!user) { if (active) { setShifts([]); setDataState("ready"); } return; }
         const [rows, profileResult] = await Promise.all([
           loadUserShifts(user.id),
-          supabase.from("profiles").select("monthly_goal_type,monthly_goal_value").eq("id", user.id).single(),
+          supabase.from("profiles").select("monthly_goal_type,monthly_goal_value,hourly_rate").eq("id", user.id).maybeSingle(),
         ]);
         if (profileResult.error) console.warn("Unable to load monthly goal", profileResult.error);
         if (!active) return;
         setShifts(rows);
         setGoalType(profileResult.data?.monthly_goal_type === "income" || profileResult.data?.monthly_goal_type === "hours" ? profileResult.data.monthly_goal_type : null);
         setGoalValue(Number(profileResult.data?.monthly_goal_value) || 0);
+        setHourlyRate(Math.max(0, Number(profileResult.data?.hourly_rate) || 150));
         setDataState("ready");
         void syncConnecteamIfConnected()
           .then((result) => result.synced ? loadUserShifts(user.id) : null)
@@ -262,7 +264,11 @@ export default function Analytics() {
               const unit = goalType === "income" ? "" : ` ${a.hoursShort}`;
               const valueLabel = goalType === "income" ? money(achieved) : `${achieved.toLocaleString(lang)}${unit}`;
               const targetLabel = goalType === "income" ? money(goalValue) : `${goalValue.toLocaleString(lang)}${unit}`;
-              return <><div className="an-goal-values"><strong>{valueLabel}</strong><span>{targetLabel}</span><b>{percent}%</b></div><div className="an-goal-track" role="progressbar" aria-valuenow={Math.min(percent,100)} aria-valuemin={0} aria-valuemax={100}><i style={{width:`${Math.min(Math.max(percent,0),100)}%`}}/></div><div className="an-goal-foot"><span>{goalType === "income" ? a.earnings : a.hours}</span><span>{goalType === "income" ? money(Math.max(0, goalValue-achieved)) : Math.max(0, goalValue-achieved).toLocaleString(lang)} {a.remaining}</span></div></>;
+              const remainingValue = Math.max(0, goalValue - achieved);
+              const remainingHours = goalType === "income" ? (hourlyRate > 0 ? remainingValue / hourlyRate : 0) : remainingValue;
+              const shiftsLeft = remainingValue > 0 ? Math.ceil(remainingHours / 7) : 0;
+              const remainingLabel = goalType === "income" ? money(remainingValue) : `${remainingValue.toLocaleString(lang)}${unit}`;
+              return <><div className="an-goal-values"><strong>{valueLabel}</strong><span>{targetLabel}</span><b>{percent}%</b></div><div className="an-goal-track" role="progressbar" aria-valuenow={Math.min(percent,100)} aria-valuemin={0} aria-valuemax={100}><i style={{width:`${Math.min(Math.max(percent,0),100)}%`}}/></div><div className="an-goal-foot"><span>{goalType === "income" ? a.earnings : a.hours}</span><span>{remainingLabel} {a.remaining} · <strong>{shiftsLeft} {a.shiftsLeft}</strong></span></div></>;
             })() : <div className="an-goal-empty"><p>{a.noGoal}</p><Link href="/profile">{a.setGoal} →</Link></div>}
           </section>
 
