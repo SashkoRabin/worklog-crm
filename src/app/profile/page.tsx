@@ -3,7 +3,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Moon, Sun, UserRound, Target, Globe2, Save, LoaderCircle, CalendarDays, BarChart3, Trash2 } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { enUS, ru, cs } from "date-fns/locale";
+import { loadUserShifts } from "@/lib/connecteam-client";
+import type { Shift } from "@/lib/worklog";
+import { ArrowLeft, Moon, Sun, UserRound, Target, Globe2, Save, LoaderCircle, CalendarDays, BarChart3, Trash2, WalletCards, CheckCircle2, Plus, CalendarClock, TrendingUp, CircleDollarSign } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Lang, money } from "@/lib/worklog";
 import { MobileNav } from "@/components/mobile-nav";
@@ -11,9 +15,12 @@ import { MobileNav } from "@/components/mobile-nav";
 type Theme = "light" | "dark";
 type GoalType = "income" | "hours" | "";
 type SaveState = "idle" | "saving" | "saved" | "error";
+type SalaryPayment = { id: string; period_month: string; amount: number; paid_at: string };
+type MonthSalary = { month: string; earned: number; received: number; unpaid: number; lastPaidAt: string | null };
 
 const text = {
   en: {
+    salary:"My salary",salaryDescription:"Track what you earned, what you received and what is still owed.",earnedSalary:"Earned",receivedSalary:"Received",unpaidSalary:"Still owed",recordPayment:"Record payment",paymentAmount:"Amount received",paymentDate:"Payment date",addPayment:"Add payment",receivedButton:"Received",settleHint:"Mark the outstanding balance as paid and add it to your received total.",noDebt:"Nothing outstanding. Your salary is up to date.",paymentHistory:"Monthly history",noHistory:"No salary history yet.",month:"Month",paidOn:"Paid",totalOwed:"Total still owed",paymentSaved:"Payment recorded",paymentSettled:"Outstanding balance marked as received",paymentError:"Could not save payment. Apply the salary payments migration first.",paymentInvalid:"Enter an amount greater than zero.",
     eyebrow:"YOUR ACCOUNT",title:"Profile",description:"Manage your hourly rate and monthly target.",
     rate:"Hourly rate",rateHint:"Your default rate for new shifts. Existing shifts keep their saved rate.",
     saveRate:"Save rate",saving:"Saving…",saved:"Saved",rateError:"Could not save hourly rate. Please try again.",
@@ -29,6 +36,7 @@ const text = {
     fallback:"Your settings are ready. Existing profile values will appear after the profile record is available.",
   },
   ru: {
+    salary:"Моя зарплата",salaryDescription:"Контролируй начисления, полученные деньги и оставшуюся задолженность.",earnedSalary:"Начислено",receivedSalary:"Получено",unpaidSalary:"Не выдано",recordPayment:"Записать выплату",paymentAmount:"Сколько получил",paymentDate:"Дата получки",addPayment:"Добавить выплату",receivedButton:"Получил",settleHint:"Подтверди получение остатка. Сумма добавится к полученным деньгам.",noDebt:"Задолженности нет. Зарплата выплачена полностью.",paymentHistory:"История по месяцам",noHistory:"Истории выплат пока нет.",month:"Месяц",paidOn:"Получено",totalOwed:"Всего должны",paymentSaved:"Выплата записана",paymentSettled:"Остаток отмечен как полученный",paymentError:"Не удалось сохранить выплату. Сначала примени миграцию зарплат.",paymentInvalid:"Введи сумму больше нуля.",
     eyebrow:"ТВОЙ АККАУНТ",title:"Профиль",description:"Управляй почасовой ставкой и целью на месяц.",
     rate:"Почасовая ставка",rateHint:"Ставка по умолчанию для новых смен. У существующих смен сохраняется прежняя ставка.",
     saveRate:"Сохранить ставку",saving:"Сохранение…",saved:"Сохранено",rateError:"Не удалось сохранить ставку. Попробуй ещё раз.",
@@ -44,6 +52,7 @@ const text = {
     fallback:"Настройки доступны. Сохранённые значения появятся, когда запись профиля станет доступна.",
   },
   cs: {
+    salary:"Moje výplata",salaryDescription:"Sledujte výdělek, přijaté peníze a zbývající dlužnou částku.",earnedSalary:"Vyděláno",receivedSalary:"Vyplaceno",unpaidSalary:"Zbývá vyplatit",recordPayment:"Zaznamenat výplatu",paymentAmount:"Přijatá částka",paymentDate:"Datum výplaty",addPayment:"Přidat výplatu",receivedButton:"Přijato",settleHint:"Potvrďte přijetí zbývající částky a přičtěte ji k vyplaceným penězům.",noDebt:"Žádný nedoplatek. Výplata je kompletní.",paymentHistory:"Měsíční historie",noHistory:"Zatím žádná historie výplat.",month:"Měsíc",paidOn:"Vyplaceno",totalOwed:"Celkem dluženo",paymentSaved:"Výplata zaznamenána",paymentSettled:"Zbývající částka byla označena jako vyplacená",paymentError:"Výplatu se nepodařilo uložit. Nejprve použijte migraci výplat.",paymentInvalid:"Zadejte částku větší než nula.",
     eyebrow:"VÁŠ ÚČET",title:"Profil",description:"Spravujte hodinovou sazbu a měsíční cíl.",
     rate:"Hodinová sazba",rateHint:"Výchozí sazba pro nové směny. Starší směny si zachovají uloženou sazbu.",
     saveRate:"Uložit sazbu",saving:"Ukládání…",saved:"Uloženo",rateError:"Hodinovou sazbu se nepodařilo uložit. Zkuste to znovu.",
@@ -82,6 +91,13 @@ export default function ProfilePage() {
   const [notice,setNotice]=useState("");
   const [loading,setLoading]=useState(true);
   const [profileFallback,setProfileFallback]=useState(false);
+  const [shifts,setShifts]=useState<Shift[]>([]);
+  const [payments,setPayments]=useState<SalaryPayment[]>([]);
+  const [paymentAmount,setPaymentAmount]=useState("");
+  const [paymentDate,setPaymentDate]=useState(()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");});
+  const [paymentState,setPaymentState]=useState<SaveState>("idle");
+  const [paymentError,setPaymentError]=useState("");
+  const [paymentNotice,setPaymentNotice]=useState("");
   const t=text[lang];
 
   useEffect(()=>{
@@ -102,9 +118,11 @@ export default function ProfilePage() {
         setUserId(user.id);setEmail(user.email||"");
         // maybeSingle handles a first-time account with no profile row. If the
         // monthly-goal migration is not deployed yet, fall back to legacy fields.
-        const full=await supabase.from("profiles")
-          .select("hourly_rate,display_name,monthly_goal_type,monthly_goal_value")
-          .eq("id",user.id).maybeSingle();
+        const [full, shiftResult, paymentResult] = await Promise.all([
+          supabase.from("profiles").select("hourly_rate,display_name,monthly_goal_type,monthly_goal_value").eq("id",user.id).maybeSingle(),
+          loadUserShifts(user.id).then(rows=>({rows,error:null as unknown})).catch(error=>({rows:[] as Shift[],error})),
+          supabase.from("salary_payments").select("id,period_month,amount,paid_at").eq("user_id",user.id).order("paid_at",{ascending:false}),
+        ]);
         if(!active)return;
         if(!full.error&&full.data){
           setName(full.data.display_name||"");
@@ -115,14 +133,13 @@ export default function ProfilePage() {
         }else{
           const legacy=await supabase.from("profiles").select("hourly_rate,display_name").eq("id",user.id).maybeSingle();
           if(!active)return;
-          if(!legacy.error&&legacy.data){
-            setName(legacy.data.display_name||"");
-            setRate(String(legacy.data.hourly_rate??150));
-          }else{
-            setProfileFallback(true);
-            console.warn("Profile row unavailable; showing editable defaults",full.error||legacy.error);
-          }
+          if(!legacy.error&&legacy.data){setName(legacy.data.display_name||"");setRate(String(legacy.data.hourly_rate??150));}
+          else{setProfileFallback(true);console.warn("Profile row unavailable; showing editable defaults",full.error||legacy.error);}
         }
+        if(shiftResult.error)console.warn("Could not load shifts for salary summary",shiftResult.error);
+        setShifts(shiftResult.rows);
+        if(paymentResult.error){console.error("Salary payment history unavailable",paymentResult.error);setPaymentError("migration");}
+        else setPayments((paymentResult.data||[]) as SalaryPayment[]);
       }catch(e){
         console.warn("Profile initialization; showing editable defaults",e);
         if(active)setProfileFallback(true);
