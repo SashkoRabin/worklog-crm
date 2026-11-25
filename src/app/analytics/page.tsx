@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { format, isSameMonth, parseISO, startOfMonth, subMonths } from "date-fns";
 import {
   Activity, ArrowDownRight, ArrowUpRight, BarChart3, CalendarDays,
-  Clock3, Globe2, MapPin, Moon, RefreshCw, Sun,
+  Clock3, Globe2, MapPin, Moon, RefreshCw, Settings2, Sun,
   TrendingUp, WalletCards, BriefcaseBusiness, ChevronDown, Target, UserRound,
 } from "lucide-react";
 import { loadUserShifts, syncConnecteamIfConnected } from "@/lib/connecteam-client";
