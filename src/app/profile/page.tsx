@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Moon, Sun, UserRound, Target, Globe2, Save, LoaderCircle, CalendarDays, BarChart3, Trash2, Pencil, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Moon, Sun, UserRound, Target, Globe2, Save, LoaderCircle, CalendarDays, BarChart3, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Lang, money } from "@/lib/worklog";
 import { MobileNav } from "@/components/mobile-nav";
@@ -75,6 +75,7 @@ export default function ProfilePage() {
   const [rate,setRate]=useState("150");
   const [goalType,setGoalType]=useState<GoalType>("");
   const [goalValue,setGoalValue]=useState("");
+  const [hasGoal,setHasGoal]=useState(false);
   const [rateState,setRateState]=useState<SaveState>("idle");
   const [goalState,setGoalState]=useState<SaveState>("idle");
   const [error,setError]=useState("");
@@ -110,6 +111,7 @@ export default function ProfilePage() {
           setRate(String(full.data.hourly_rate??150));
           setGoalType(full.data.monthly_goal_type==="income"||full.data.monthly_goal_type==="hours"?full.data.monthly_goal_type:"");
           setGoalValue(full.data.monthly_goal_value==null?"":String(full.data.monthly_goal_value));
+          setHasGoal(Boolean(full.data.monthly_goal_type && full.data.monthly_goal_value != null));
         }else{
           const legacy=await supabase.from("profiles").select("hourly_rate,display_name").eq("id",user.id).maybeSingle();
           if(!active)return;
@@ -163,7 +165,7 @@ export default function ProfilePage() {
       id:userId,monthly_goal_type:goalType,monthly_goal_value:numericGoal,
     },{onConflict:"id"});
     if(saveError){console.error("Monthly goal save failed",saveError);setGoalState("error");setError(t.goalError);return;}
-    setGoalState("saved");setNotice(t.goalSaved);window.setTimeout(()=>setGoalState("idle"),2200);
+    setHasGoal(true);setGoalState("saved");setNotice(t.goalSaved);window.setTimeout(()=>setGoalState("idle"),2200);
   }
 
   async function deleteGoal(){
@@ -173,7 +175,7 @@ export default function ProfilePage() {
       monthly_goal_type:null,monthly_goal_value:null,
     }).eq("id",userId);
     if(deleteError){console.error("Monthly goal delete failed",deleteError);setGoalState("error");setError(t.goalError);return;}
-    setGoalType("");setGoalValue("");setGoalState("saved");setNotice(t.goalDeleted);
+    setGoalType("");setGoalValue("");setHasGoal(false);setGoalState("saved");setNotice(t.goalDeleted);
     window.setTimeout(()=>setGoalState("idle"),2200);
   }
 
@@ -219,7 +221,7 @@ export default function ProfilePage() {
           {estimate&&<div className="profile-estimate"><span>{estimate.label}</span><strong>{estimate.value}</strong></div>}
           <div className="profile-goal-actions">
             {goalType&&<button type="button" className="primary profile-save" onClick={saveGoal} disabled={goalState==="saving"}><Save size={16}/>{goalState==="saving"?t.saving:goalState==="saved"?t.saved:t.updateGoal}</button>}
-            {(goalType||goalValue)&&<button type="button" className="profile-delete-goal" onClick={deleteGoal} disabled={goalState==="saving"}><Trash2 size={15}/>{t.deleteGoal}</button>}
+            {(hasGoal||goalType||goalValue)&&<button type="button" className="profile-delete-goal" onClick={deleteGoal} disabled={goalState==="saving"}><Trash2 size={15}/>{t.deleteGoal}</button>}
             {!goalType&&<p className="profile-no-goal">{t.noGoal}</p>}
           </div>
         </section>
