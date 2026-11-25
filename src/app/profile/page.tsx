@@ -16,11 +16,11 @@ type Theme = "light" | "dark";
 type GoalType = "income" | "hours" | "";
 type SaveState = "idle" | "saving" | "saved" | "error";
 type SalaryPayment = { id: string; period_month: string; amount: number; paid_at: string };
-type MonthSalary = { month: string; earned: number; received: number; unpaid: number; lastPaidAt: string | null };
+type MonthSalary = { month: string; earned: number; received: number; unpaid: number; lastPaidAt: string | null; payments: SalaryPayment[] };
 
 const text = {
   en: {
-    salary:"My salary",salaryDescription:"Track what you earned, what you received and what is still owed.",earnedSalary:"Earned",receivedSalary:"Received",unpaidSalary:"Still owed",recordPayment:"Record payment",paymentAmount:"Amount received",paymentDate:"Payment date",addPayment:"Add payment",receivedButton:"Received",settleHint:"Mark the outstanding balance as paid and add it to your received total.",noDebt:"Nothing outstanding. Your salary is up to date.",paymentHistory:"Monthly history",noHistory:"No salary history yet.",month:"Month",paidOn:"Paid",totalOwed:"Total still owed",paymentSaved:"Payment recorded",paymentSettled:"Outstanding balance marked as received",paymentError:"Could not save payment. Apply the salary payments migration first.",paymentInvalid:"Enter an amount greater than zero.",
+    salary:"My salary",salaryDescription:"Track what you earned, what you received and what is still owed.",earnedSalary:"Earned",receivedSalary:"Received",unpaidSalary:"Still owed",recordPayment:"Record payment",paymentAmount:"Amount received",paymentDate:"Payment date",addPayment:"Add payment",receivedButton:"Received",settleHint:"Mark the outstanding balance as paid and add it to your received total.",noDebt:"Nothing outstanding. Your salary is up to date.",paymentHistory:"Monthly history",paymentLog:"Payment dates",noPaymentsMonth:"No payments recorded for this month.",noHistory:"No salary history yet.",month:"Month",paidOn:"Paid",totalOwed:"Total still owed",paymentSaved:"Payment recorded",paymentSettled:"Outstanding balance marked as received",paymentError:"Could not save payment. Apply the salary payments migration first.",paymentInvalid:"Enter an amount greater than zero.",
     eyebrow:"YOUR ACCOUNT",title:"Profile",description:"Manage your hourly rate and monthly target.",
     rate:"Hourly rate",rateHint:"Your default rate for new shifts. Existing shifts keep their saved rate.",
     saveRate:"Save rate",saving:"Saving…",saved:"Saved",rateError:"Could not save hourly rate. Please try again.",
@@ -36,7 +36,7 @@ const text = {
     fallback:"Your settings are ready. Existing profile values will appear after the profile record is available.",
   },
   ru: {
-    salary:"Моя зарплата",salaryDescription:"Контролируй начисления, полученные деньги и оставшуюся задолженность.",earnedSalary:"Начислено",receivedSalary:"Получено",unpaidSalary:"Не выдано",recordPayment:"Записать выплату",paymentAmount:"Сколько получил",paymentDate:"Дата получки",addPayment:"Добавить выплату",receivedButton:"Получил",settleHint:"Подтверди получение остатка. Сумма добавится к полученным деньгам.",noDebt:"Задолженности нет. Зарплата выплачена полностью.",paymentHistory:"История по месяцам",noHistory:"Истории выплат пока нет.",month:"Месяц",paidOn:"Получено",totalOwed:"Всего должны",paymentSaved:"Выплата записана",paymentSettled:"Остаток отмечен как полученный",paymentError:"Не удалось сохранить выплату. Сначала примени миграцию зарплат.",paymentInvalid:"Введи сумму больше нуля.",
+    salary:"Моя зарплата",salaryDescription:"Контролируй начисления, полученные деньги и оставшуюся задолженность.",earnedSalary:"Начислено",receivedSalary:"Получено",unpaidSalary:"Не выдано",recordPayment:"Записать выплату",paymentAmount:"Сколько получил",paymentDate:"Дата получки",addPayment:"Добавить выплату",receivedButton:"Получил",settleHint:"Подтверди получение остатка. Сумма добавится к полученным деньгам.",noDebt:"Задолженности нет. Зарплата выплачена полностью.",paymentHistory:"История по месяцам",paymentLog:"Даты выплат",noPaymentsMonth:"В этом месяце выплат пока не было.",noHistory:"Истории выплат пока нет.",month:"Месяц",paidOn:"Получено",totalOwed:"Всего должны",paymentSaved:"Выплата записана",paymentSettled:"Остаток отмечен как полученный",paymentError:"Не удалось сохранить выплату. Сначала примени миграцию зарплат.",paymentInvalid:"Введи сумму больше нуля.",
     eyebrow:"ТВОЙ АККАУНТ",title:"Профиль",description:"Управляй почасовой ставкой и целью на месяц.",
     rate:"Почасовая ставка",rateHint:"Ставка по умолчанию для новых смен. У существующих смен сохраняется прежняя ставка.",
     saveRate:"Сохранить ставку",saving:"Сохранение…",saved:"Сохранено",rateError:"Не удалось сохранить ставку. Попробуй ещё раз.",
@@ -52,7 +52,7 @@ const text = {
     fallback:"Настройки доступны. Сохранённые значения появятся, когда запись профиля станет доступна.",
   },
   cs: {
-    salary:"Moje výplata",salaryDescription:"Sledujte výdělek, přijaté peníze a zbývající dlužnou částku.",earnedSalary:"Vyděláno",receivedSalary:"Vyplaceno",unpaidSalary:"Zbývá vyplatit",recordPayment:"Zaznamenat výplatu",paymentAmount:"Přijatá částka",paymentDate:"Datum výplaty",addPayment:"Přidat výplatu",receivedButton:"Přijato",settleHint:"Potvrďte přijetí zbývající částky a přičtěte ji k vyplaceným penězům.",noDebt:"Žádný nedoplatek. Výplata je kompletní.",paymentHistory:"Měsíční historie",noHistory:"Zatím žádná historie výplat.",month:"Měsíc",paidOn:"Vyplaceno",totalOwed:"Celkem dluženo",paymentSaved:"Výplata zaznamenána",paymentSettled:"Zbývající částka byla označena jako vyplacená",paymentError:"Výplatu se nepodařilo uložit. Nejprve použijte migraci výplat.",paymentInvalid:"Zadejte částku větší než nula.",
+    salary:"Moje výplata",salaryDescription:"Sledujte výdělek, přijaté peníze a zbývající dlužnou částku.",earnedSalary:"Vyděláno",receivedSalary:"Vyplaceno",unpaidSalary:"Zbývá vyplatit",recordPayment:"Zaznamenat výplatu",paymentAmount:"Přijatá částka",paymentDate:"Datum výplaty",addPayment:"Přidat výplatu",receivedButton:"Přijato",settleHint:"Potvrďte přijetí zbývající částky a přičtěte ji k vyplaceným penězům.",noDebt:"Žádný nedoplatek. Výplata je kompletní.",paymentHistory:"Měsíční historie",paymentLog:"Data výplat",noPaymentsMonth:"Tento měsíc zatím nebyly zaznamenány žádné výplaty.",noHistory:"Zatím žádná historie výplat.",month:"Měsíc",paidOn:"Vyplaceno",totalOwed:"Celkem dluženo",paymentSaved:"Výplata zaznamenána",paymentSettled:"Zbývající částka byla označena jako vyplacená",paymentError:"Výplatu se nepodařilo uložit. Nejprve použijte migraci výplat.",paymentInvalid:"Zadejte částku větší než nula.",
     eyebrow:"VÁŠ ÚČET",title:"Profil",description:"Spravujte hodinovou sazbu a měsíční cíl.",
     rate:"Hodinová sazba",rateHint:"Výchozí sazba pro nové směny. Starší směny si zachovají uloženou sazbu.",
     saveRate:"Uložit sazbu",saving:"Ukládání…",saved:"Uloženo",rateError:"Hodinovou sazbu se nepodařilo uložit. Zkuste to znovu.",
@@ -162,9 +162,9 @@ export default function ProfilePage() {
   const currentMonth = todayKey.slice(0,7);
   const monthSummaries = useMemo<MonthSalary[]>(()=>{
     const map = new Map<string,MonthSalary>();
-    const ensure=(month:string)=>{if(!map.has(month))map.set(month,{month,earned:0,received:0,unpaid:0,lastPaidAt:null});return map.get(month)!;};
+    const ensure=(month:string)=>{if(!map.has(month))map.set(month,{month,earned:0,received:0,unpaid:0,lastPaidAt:null,payments:[]});return map.get(month)!;};
     for(const shift of shifts){if(shift.work_date>todayKey)continue;ensure(shift.work_date.slice(0,7)).earned+=Number(shift.hours||0)*Number(shift.hourly_rate||0);}
-    for(const payment of payments){const row=ensure(payment.period_month.slice(0,7));row.received+=Number(payment.amount||0);if(!row.lastPaidAt||payment.paid_at>row.lastPaidAt)row.lastPaidAt=payment.paid_at;}
+    for(const payment of payments){const row=ensure(payment.period_month.slice(0,7));row.received+=Number(payment.amount||0);row.payments.push(payment);if(!row.lastPaidAt||payment.paid_at>row.lastPaidAt)row.lastPaidAt=payment.paid_at;}
     for(const row of map.values())row.unpaid=Math.max(0,row.earned-row.received);
     ensure(currentMonth);
     return Array.from(map.values()).sort((a,b)=>b.month.localeCompare(a.month));
@@ -267,6 +267,10 @@ export default function ProfilePage() {
             <div className="salary-settle-row"><div><strong>{t.receivedButton}</strong><span>{t.settleHint}</span></div><button type="button" className="salary-settle-button" onClick={settleOutstanding} disabled={paymentState==="saving"||!selectedSalary?.unpaid}><CheckCircle2 size={16}/>{t.receivedButton}</button></div>
             {selectedSalary?.unpaid===0&&<p className="salary-no-debt"><CheckCircle2 size={15}/>{t.noDebt}</p>}
             {(paymentError||paymentNotice)&&<p className={paymentError?"salary-error":"salary-notice"} role={paymentError?"alert":"status"}>{paymentError?t.paymentError:paymentNotice}</p>}
+          </div>
+          <div className="salary-payment-log">
+            <div className="salary-history-heading"><h3>{t.paymentLog}</h3><span>{selectedSalary?.payments.length||0}</span></div>
+            {selectedSalary?.payments.length ? <div className="salary-payment-list">{[...selectedSalary.payments].sort((a,b)=>b.paid_at.localeCompare(a.paid_at)).map(payment=><div className="salary-payment-item" key={payment.id}><span className="salary-payment-check"><CheckCircle2 size={15}/></span><span className="salary-payment-date">{dateLabel(payment.paid_at)}</span><strong>{money(payment.amount)}</strong></div>)}</div> : <p className="salary-empty">{t.noPaymentsMonth}</p>}
           </div>
           <div className="salary-history">
             <div className="salary-history-heading"><h3>{t.paymentHistory}</h3><span>{monthSummaries.length} {t.month.toLowerCase()}</span></div>
