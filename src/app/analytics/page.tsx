@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { addMonths, format, isSameMonth, parseISO, startOfMonth, subMonths } from "date-fns";
+import { format, isSameMonth, parseISO, startOfMonth, subMonths } from "date-fns";
 import {
   Activity, ArrowDownRight, ArrowUpRight, BarChart3, CalendarDays,
   Clock3, Globe2, MapPin, Moon, RefreshCw, Settings2, Sun,
@@ -116,7 +116,7 @@ function TrendChart({ data, lang, mode }: { data: { label: string; hours: number
       <path d={line} fill="none" stroke={mode === "hours" ? "#8068f4" : "#20b68a"} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
       {points.map((point, index) => <g key={data[index].label}><circle cx={point.x} cy={point.y} r="8" className="an-point-halo"/><circle cx={point.x} cy={point.y} r="4" fill={mode === "hours" ? "#8068f4" : "#20b68a"}/></g>)}
     </svg>
-    <div className="an-chart-labels">{data.map((item) => <span key={item.label}>{item.label}</span>)}</div>
+    <div className="an-chart-labels" style={{ gridTemplateColumns: `repeat(${data.length}, minmax(0, 1fr))` }}>{data.map((item) => <span key={item.label}>{item.label}</span>)}</div>
   </div>;
 }
 
@@ -199,7 +199,7 @@ export default function Analytics() {
   const colors = ["#8068f4", "#20b68a", "#f3a64a", "#4c9de8", "#e779a8", "#8993a5"];
   const weekdays = Array.from({ length: 7 }, (_, day) => {
     const rows = current.filter((shift) => (parseISO(shift.work_date).getDay() + 6) % 7 === day);
-    return { label: format(addMonths(new Date(2024, 0, 1 + day), 0), "EEE", { locale: locales[lang] }), hours: rows.reduce((sum, shift) => sum + shift.hours, 0) };
+    return { label: format(new Date(2024, 0, 1 + day), "EEE", { locale: locales[lang] }), hours: rows.reduce((sum, shift) => sum + shift.hours, 0) };
   });
   const maxWeekday = Math.max(...weekdays.map((day) => day.hours), 1);
   const bestDay = [...weekdays].sort((left, right) => right.hours - left.hours)[0];
@@ -247,7 +247,7 @@ export default function Analytics() {
             <section className="card an-panel">
               <div className="an-section-head"><div><div className="an-kicker"><MapPin size={14}/>{a.locations}</div><h2>{a.locationsHint}</h2></div><span className="an-count">{byStore.length}</span></div>
               {byStore.length ? <div className="an-store-content">
-                <div className="an-donut-wrap"><div className="an-donut" style={{ background: donutGradient(byStore, totalStoreHours, colors) }}}><div><strong>{Math.round(totalStoreHours)}</strong><span>{a.hoursShort}</span></div></div></div>
+                <div className="an-donut-wrap"><div className="an-donut" style={{ background: donutGradient(byStore, totalStoreHours, colors) }}><div><strong>{Math.round(totalStoreHours)}</strong><span>{a.hoursShort}</span></div></div></div>
                 <div className="an-legend">{byStore.map(([name, hours], index) => <div className="an-legend-row" key={name}><i style={{ background: colors[index % colors.length] }}/><span>{getStoreDisplayName(name, lang)}</span><b>{hours.toLocaleString(lang)} h</b><small>{Math.round(hours / Math.max(totalStoreHours, 1) * 100)}%</small></div>)}</div>
               </div> : <div className="empty">{a.noData}</div>}
               {byStore[0] && <div className="an-highlight"><span>{a.topLocation}</span><strong>{getStoreDisplayName(byStore[0][0], lang)}</strong></div>}
