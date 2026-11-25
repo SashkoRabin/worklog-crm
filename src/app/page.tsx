@@ -907,7 +907,7 @@ function ConnecteamDialog({
   return (
     <div className="overlay" onMouseDown={onClose}>
       <form className="dialog connecteam-dialog" onMouseDown={(event) => event.stopPropagation()} onSubmit={sync}>
-        <button type="button" className="close" onClick={onClose} aria-label={t.close}><X /></button>
+        <button type="button" className="close" onClick={onClose} aria-label={lang === "ru" ? "Закрыть" : lang === "cs" ? "Zavřít" : "Close"}><X /></button>
         <div className="dialog-body">
           <p className="eyebrow">{text.title}</p>
           <h2>{connected ? text.connected : text.title}</h2>
