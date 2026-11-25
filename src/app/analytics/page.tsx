@@ -259,11 +259,11 @@ export default function Analytics() {
 
             <section className="card an-panel">
               <div className="an-section-head"><div><div className="an-kicker"><CalendarDays size={14}/>{a.weekdays}</div><h2>{a.weekdaysHint}</h2></div></div>
-              {current.length ? <div className="an-week-bars">{weekdays.map((day, index) => <div className="an-week-col" key={day.label}><strong>{day.hours ? day.hours.toLocaleString(lang) : "–"}</strong><div className="an-week-track"><i style={{ height: `${Math.max(day.hours / maxWeekday * 100, day.hours ? 5 : 0)}%`, background: colors[index % colors.length] }}/></div><span>{day.label}</span></div>)}</div> : <div className="empty">{a.noData}</div>}
+              {currentActual.length ? <div className="an-week-bars">{weekdays.map((day, index) => <div className="an-week-col" key={day.label}><strong>{day.hours ? day.hours.toLocaleString(lang) : "–"}</strong><div className="an-week-track"><i style={{ height: `${Math.max(day.hours / maxWeekday * 100, day.hours ? 5 : 0)}%`, background: colors[index % colors.length] }}/></div><span>{day.label}</span></div>)}</div> : <div className="empty">{a.noData}</div>}
               <div className="an-mini-stats"><div><span>{a.bestDay}</span><strong>{bestDay.hours ? bestDay.label : "—"}</strong></div><div><span>{a.avgWeek}</span><strong>{weeklyAverage.toFixed(1)} h</strong></div></div>
             </section>
           </div>
-          <div className="an-footer-note"><span><Activity size={15}/>{a.currentPeriod}</span><span>{current.length} {a.shifts.toLowerCase()} · {a.previousPeriod}: {previousHours} h</span></div>
+          <div className="an-footer-note"><span><Activity size={15}/>{a.currentPeriod}</span><span>{currentActual.length} {a.shifts.toLowerCase()} · {a.previousPeriod}: {previousHours} h</span></div>
         </>}
       </section>
 
