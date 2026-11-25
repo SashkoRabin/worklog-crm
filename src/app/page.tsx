@@ -33,7 +33,7 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
-import { stores } from "@/lib/stores";
+import { getStoreDisplayName, stores } from "@/lib/stores";
 import {
   dismissConnecteamShift,
   loadUserShifts,
@@ -653,7 +653,7 @@ export default function Home() {
                           className={`event ${isWorkedShift(shift) ? "worked" : "upcoming"}`}
                           key={shift.id}
                         >
-                          <span className="event-title">{shift.store} · {shift.hours} h</span>
+                          <span className="event-title">{getStoreDisplayName(shift.store, lang)} · {shift.hours} h</span>
                           <span className="event-meta">
                             {isWorkedShift(shift) ? t.workedType : t.upcoming} · {shift.source === "connecteam" ? t.connecteam : t.manual}
                             {shift.notes && ` · ${shift.notes}`}
@@ -716,7 +716,7 @@ export default function Home() {
                   </span>
                 </div>
                 <div className="shift-info">
-                  <b>{shift.store}</b>
+                  <b>{getStoreDisplayName(shift.store, lang)}</b>
                   <span>{group.shiftName}</span>
                 </div>
                 <span className={`pill ${isWorkedShift(shift) ? "worked" : "assigned"}`}>
@@ -1009,7 +1009,7 @@ function ShiftCard({
           <span className="shift-editor-icon"><ClipboardList size={18} /></span>
           <div>
             <p className="eyebrow">{fromConnecteam ? t.connecteam : editing ? t.saveShift : t.newShift}</p>
-            <h2>{fromConnecteam ? editing?.store : editing ? editing?.store : t.add}</h2>
+            <h2>{fromConnecteam ? getStoreDisplayName(editing?.store ?? "", lang) : editing ? getStoreDisplayName(editing.store, lang) : t.add}</h2>
           </div>
           <button type="button" className="close" onClick={onClose} aria-label={t.close}>
           <X />
@@ -1039,7 +1039,7 @@ function ShiftCard({
                     aria-pressed={editing?.id === item.id}
                   >
                     <span>
-                      <b>{item.store}</b>
+                      <b>{getStoreDisplayName(item.store, lang)}</b>
                       <small>{item.shift_name}</small>
                     </span>
                     <strong>{item.hours} h</strong>
@@ -1088,7 +1088,7 @@ function ShiftCard({
               {hasCustomStore && <option value={editing!.store}>{editing!.store}</option>}
               {stores.map((item) => (
                 <option value={item.name} key={item.id}>
-                  {item.name}
+                  {getStoreDisplayName(item.name, lang)}
                 </option>
               ))}
             </select>
