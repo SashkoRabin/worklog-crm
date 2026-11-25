@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { format, isSameMonth, parseISO, startOfMonth, subMonths } from "date-fns";
 import {
   Activity, ArrowDownRight, ArrowUpRight, BarChart3, CalendarDays,
-  Clock3, Globe2, MapPin, Moon, RefreshCw, Settings2, Sun,
+  Clock3, Globe2, MapPin, Moon, RefreshCw, Sun,
   TrendingUp, WalletCards, BriefcaseBusiness, ChevronDown, Target, UserRound,
 } from "lucide-react";
 import { loadUserShifts, syncConnecteamIfConnected } from "@/lib/connecteam-client";
@@ -304,7 +304,7 @@ export default function Analytics() {
         </>}
       </section>
 
-      <MobileNav active="analytics" calendar={t.calendar} analytics={t.analytics} profile={a.profile}/>
+      <MobileNav active="analytics" calendar={t.calendar} analytics={t.analytics} profile={a.profile} settings={t.settings} onSettings={() => setMobileMenu(true)}/>
       {mobileMenu && <div className="overlay mobile-sheet-overlay" onMouseDown={() => setMobileMenu(false)}><section className="mobile-sheet" role="dialog" aria-modal="true" aria-label={t.settings} onMouseDown={(event) => event.stopPropagation()}><span className="sheet-handle"/><div className="mobile-sheet-head"><h2>{t.settings}</h2><button type="button" className="close" onClick={() => setMobileMenu(false)} aria-label={a.close}>×</button></div><div className="mobile-setting-row"><span>{a.theme}</span><button type="button" className="setting-action" onClick={() => setTheme(theme === "light" ? "dark" : "light")}>{theme === "light" ? <Moon/> : <Sun/>}{theme === "light" ? t.dark : t.light}</button></div><div className="mobile-setting-row"><span>{a.language}</span><Picker lang={lang} setLang={setLang}/></div></section></div>}
     </main>
   );
