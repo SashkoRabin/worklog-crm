@@ -576,7 +576,7 @@ export default function Home() {
           <Metric
             icon={<MapPin />}
             label={t.mainStore}
-            value={byStore[0]?.[0] || "—"}
+            value={byStore[0] ? getStoreDisplayName(byStore[0][0], lang) : "—"}
             caption={
               byStore[0]
                 ? `${Math.round((byStore[0][1] / Math.max(hours, 1)) * 100)}%`
