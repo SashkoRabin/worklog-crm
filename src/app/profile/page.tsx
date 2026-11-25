@@ -252,7 +252,7 @@ export default function ProfilePage() {
       :<div className="profile-layout">
         <section className="salary-overview">
           <div className="salary-overview-head">
-            <div><div className="salary-kicker"><WalletCards size={15}/>{t.salary}</div><h2>{monthLabel(selectedSalaryMonth)}</h2><p>{t.salaryDescription}</p><div className="salary-collapsed-value"><span>{t.unpaidSalary}</span><strong>{money(selectedSalary?.unpaid||0)}</strong><small>{t.totalOwed}: {money(totalOwed)}</small></div></div>
+            <div><div className="salary-kicker"><WalletCards size={15}/>{t.salary}</div><h2>{monthLabel(selectedSalaryMonth)}</h2><p>{t.salaryDescription}</p><div className="salary-collapsed-value"><div className="salary-debt-copy"><span>{t.unpaidSalary}</span><strong>{money(selectedSalary?.unpaid||0)}</strong></div><small>{t.totalOwed}: <b>{money(totalOwed)}</b></small></div></div>
             <div className="salary-head-actions"><label className="salary-month-select"><CalendarClock size={16}/><select aria-label={t.month} value={selectedSalaryMonth} onChange={e=>{setSelectedSalaryMonth(e.target.value);setPaymentNotice("");setPaymentError("");}}>{monthSummaries.map(row=><option key={row.month} value={row.month}>{monthLabel(row.month)}</option>)}</select></label><button type="button" className="section-toggle salary-toggle" aria-expanded={isExpanded("salary")} aria-label={isExpanded("salary")?t.collapse:t.expand} onClick={()=>toggleSection("salary")}><ChevronDown size={17}/></button></div>
           </div>
           {isExpanded("salary")&&<div className="salary-expanded-content">
