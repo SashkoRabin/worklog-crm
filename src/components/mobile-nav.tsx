@@ -1,17 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { BarChart3, CalendarDays, UserRound } from "lucide-react";
+import { BarChart3, CalendarDays, Settings2, UserRound } from "lucide-react";
 
 type MobileNavProps = {
   active: "calendar" | "analytics" | "profile";
   calendar: string;
   analytics: string;
   profile: string;
+  settings: string;
+  onSettings: () => void;
 };
 
-/** Three primary sections, kept within thumb reach on small touch devices. */
-export function MobileNav({ active, calendar, analytics, profile }: MobileNavProps) {
+/** Main sections plus quick settings, all within thumb reach on mobile. */
+export function MobileNav({ active, calendar, analytics, profile, settings, onSettings }: MobileNavProps) {
   return (
     <nav className="mobile-nav" aria-label="Primary navigation">
       <Link href="/" className={active === "calendar" ? "active" : ""} aria-current={active === "calendar" ? "page" : undefined}>
@@ -23,6 +25,9 @@ export function MobileNav({ active, calendar, analytics, profile }: MobileNavPro
       <Link href="/profile" className={active === "profile" ? "active" : ""} aria-current={active === "profile" ? "page" : undefined}>
         <UserRound aria-hidden="true" /><span>{profile}</span>
       </Link>
+      <button type="button" onClick={onSettings} aria-label={settings}>
+        <Settings2 aria-hidden="true" /><span>{settings}</span>
+      </button>
     </nav>
   );
 }
