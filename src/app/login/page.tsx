@@ -15,6 +15,7 @@ const words = {
     intro: "Use your email and password to access your private workspace.",
     wait: "Please wait…",
     missing: "Supabase is not configured.",
+    headline: "Work in the rhythm", tagline: "of your life.",
   },
   ru: {
     login: "Войти",
@@ -25,6 +26,7 @@ const words = {
       "Войдите по электронной почте, чтобы открыть личное рабочее пространство.",
     wait: "Подождите…",
     missing: "Supabase не настроен.",
+    headline: "Работай в ритме", tagline: "своей жизни.",
   },
   cs: {
     login: "Přihlásit se",
@@ -35,6 +37,7 @@ const words = {
       "Přihlaste se e-mailem a heslem do svého soukromého pracovního prostoru.",
     wait: "Čekejte…",
     missing: "Supabase není nastaven.",
+    headline: "Pracuj v rytmu", tagline: "svého života.",
   },
 };
 export default function LoginPage() {
@@ -92,9 +95,9 @@ export default function LoginPage() {
         </label>
         <p className="eyebrow">WORKLOG</p>
         <h1>
-          Work in the rhythm
+          {t.headline}
           <br />
-          <em>of your life.</em>
+          <em>{t.tagline}</em>
         </h1>
         <p className="auth-copy">{t.intro}</p>
         <div className="auth-card">
