@@ -177,11 +177,11 @@ export default function ProfilePage() {
           <section className="card profile-card">
             <div className="profile-card-heading"><span className="an-icon"><Target/></span><div><h2>{t.goal}</h2><p>{t.goalHint}</p></div></div>
             <label className="profile-field">{t.goalType}
-              <select value={goalType} onChange={(e) => { setGoalType(e.target.value as GoalType); setError(""); }}>
+              <select value={goalType} onChange={(e) => { setGoalType(e.target.value as GoalType); setGoalValue(""); setError(""); }}>
                 <option value="">{t.clearGoal}</option><option value="income">{t.incomeGoal}</option><option value="hours">{t.hoursGoal}</option>
               </select>
             </label>
-            {goalType && <label className="profile-field">{t.amount}<div className="profile-input-with-unit"><input type="number" min="0.1" step="0.1" value={goalValue} onChange={(e) => setGoalValue(e.target.value)} required/><span>{goalType === "income" ? t.currency : t.hours}</span></div></label>}
+            {goalType && <label className="profile-field">{t.amount}<div className="profile-input-with-unit"><input type="number" min="0.1" step="0.1" value={goalValue} onChange={(e) => { setGoalValue(e.target.value); setError(""); }} required/><span>{goalType === "income" ? t.currency : t.hours}</span></div></label>}
             {estimate && <div className="profile-estimate"><span>{estimate.label}</span><strong>{estimate.value}</strong></div>}
             {!goalType && <p className="profile-no-goal">{t.clearGoal}</p>}
           </section>
@@ -197,5 +197,3 @@ export default function ProfilePage() {
   );
 }
 
-function CalendarDaysIcon() { return <span aria-hidden="true">▦</span>; }
-function BarChart3Icon() { return <span aria-hidden="true">▥</span>; }
