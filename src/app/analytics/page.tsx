@@ -1,19 +1,13 @@
 "use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { format, isSameMonth, parseISO, subMonths } from "date-fns";
+import { addMonths, format, isSameMonth, parseISO, startOfMonth, subMonths } from "date-fns";
 import {
-  BarChart3,
-  CalendarDays,
-  Clock3,
-  Globe2,
-  MapPin,
-  Moon,
-  Settings2,
-  Sun,
-  TrendingUp,
-  WalletCards,
+  Activity, ArrowDownRight, ArrowUpRight, BarChart3, CalendarDays,
+  Clock3, Globe2, MapPin, Moon, RefreshCw, Settings2, Sun,
+  TrendingUp, WalletCards, BriefcaseBusiness, ChevronDown,
 } from "lucide-react";
 import { loadUserShifts, syncConnecteamIfConnected } from "@/lib/connecteam-client";
 import { copy, isWorkedShift, Lang, locales, money, Shift } from "@/lib/worklog";
@@ -21,411 +15,246 @@ import { supabase } from "@/lib/supabase";
 import { MobileNav } from "@/components/mobile-nav";
 import { getStoreDisplayName } from "@/lib/stores";
 
-const now = new Date();
-async function withTimeout<T>(promise: Promise<T>, timeoutMs = 15000, timeoutMessage = "Request timed out"): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<T>((_, reject) => {
-        timer = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-}
-const readThemeCookie = () => {
+type Period = 6 | 12;
+type Theme = "light" | "dark";
+
+const messages = {
+  en: {
+    subtitle: "YOUR WORK, IN FOCUS", title: "Your work at a glance",
+    description: "Understand your workload, earnings and where your time goes.",
+    thisMonth: "This month", hours: "Hours worked", earnings: "Earned",
+    shifts: "Shifts completed", average: "Avg. shift", vsLast: "vs previous month",
+    trend: "Your progress", trendHint: "Hours and earnings over time",
+    hoursLabel: "Hours", incomeLabel: "Earnings", last6: "Last 6 months", last12: "Last 12 months",
+    locations: "Where you work", locationsHint: "Hours by store this month",
+    weekdays: "Your work rhythm", weekdaysHint: "Hours by day of the week",
+    topLocation: "Top location", noData: "No data for this period yet",
+    noShifts: "Your completed shifts will appear here once you have work history.",
+    loading: "Building your analytics…", error: "We couldn't load your analytics",
+    retry: "Try again", settings: "Settings", calendar: "Calendar", analytics: "Analytics",
+    language: "Language", theme: "Theme", dark: "Dark mode", light: "Light mode",
+    close: "Close", hoursShort: "h", month: "Month", total: "Total",
+    compared: "compared with last month", steady: "No change from last month",
+    bestDay: "Busiest day", avgWeek: "Avg. hours / week", incomePerHour: "Average hourly earnings",
+    currentPeriod: "Current month", previousPeriod: "Previous month",
+  },
+  ru: {
+    subtitle: "ТВОЯ РАБОТА В ЦИФРАХ", title: "Вся картина твоей работы",
+    description: "Следи за нагрузкой, заработком и распределением рабочего времени.",
+    thisMonth: "Этот месяц", hours: "Отработано часов", earnings: "Заработано",
+    shifts: "Отработано смен", average: "Средняя смена", vsLast: "к прошлому месяцу",
+    trend: "Твоя динамика", trendHint: "Часы и заработок за период",
+    hoursLabel: "Часы", incomeLabel: "Заработок", last6: "Последние 6 месяцев", last12: "Последние 12 месяцев",
+    locations: "Где ты работаешь", locationsHint: "Часы по магазинам за этот месяц",
+    weekdays: "Твой рабочий ритм", weekdaysHint: "Часы по дням недели",
+    topLocation: "Главная точка", noData: "За этот период пока нет данных",
+    noShifts: "Здесь появятся отработанные смены, когда накопится история.",
+    loading: "Собираем аналитику…", error: "Не удалось загрузить аналитику",
+    retry: "Повторить", settings: "Настройки", calendar: "Календарь", analytics: "Аналитика",
+    language: "Язык", theme: "Тема", dark: "Тёмная тема", light: "Светлая тема",
+    close: "Закрыть", hoursShort: "ч", month: "Месяц", total: "Всего",
+    compared: "по сравнению с прошлым месяцем", steady: "Без изменений к прошлому месяцу",
+    bestDay: "Самый загруженный день", avgWeek: "В среднем часов в неделю", incomePerHour: "Средний заработок в час",
+    currentPeriod: "Текущий месяц", previousPeriod: "Прошлый месяц",
+  },
+  cs: {
+    subtitle: "VAŠE PRÁCE V ČÍSLECH", title: "Přehled vaší práce",
+    description: "Sledujte pracovní vytížení, výdělky a rozložení pracovní doby.",
+    thisMonth: "Tento měsíc", hours: "Odpracované hodiny", earnings: "Vyděláno",
+    shifts: "Dokončené směny", average: "Průměrná směna", vsLast: "oproti minulému měsíci",
+    trend: "Váš vývoj", trendHint: "Hodiny a výdělky v čase",
+    hoursLabel: "Hodiny", incomeLabel: "Výdělek", last6: "Posledních 6 měsíců", last12: "Posledních 12 měsíců",
+    locations: "Kde pracujete", locationsHint: "Hodiny podle prodejny tento měsíc",
+    weekdays: "Váš pracovní rytmus", weekdaysHint: "Hodiny podle dne v týdnu",
+    topLocation: "Hlavní prodejna", noData: "Pro toto období zatím nejsou žádná data",
+    noShifts: "Zde se zobrazí odpracované směny, jakmile budete mít historii.",
+    loading: "Připravujeme analytiku…", error: "Analytiku se nepodařilo načíst",
+    retry: "Zkusit znovu", settings: "Nastavení", calendar: "Kalendář", analytics: "Analytika",
+    language: "Jazyk", theme: "Vzhled", dark: "Tmavý režim", light: "Světlý režim",
+    close: "Zavřít", hoursShort: "h", month: "Měsíc", total: "Celkem",
+    compared: "ve srovnání s minulým měsícem", steady: "Beze změny oproti minulému měsíci",
+    bestDay: "Nejvytíženější den", avgWeek: "Průměr hodin týdně", incomePerHour: "Průměrný hodinový výdělek",
+    currentPeriod: "Tento měsíc", previousPeriod: "Minulý měsíc",
+  },
+} as const;
+
+const readThemeCookie = (): Theme | null => {
   if (typeof document === "undefined") return null;
-  return document.cookie.match(
-    /(?:^|; )worklog-theme=(light|dark)(?:;|$)/,
-  )?.[1] as "light" | "dark" | undefined;
+  return (document.cookie.match(/(?:^|; )worklog-theme=(light|dark)(?:;|$)/)?.[1] as Theme) || null;
 };
-const seed: Shift[] = [
-  {
-    id: "a1",
-    work_date: format(now, "yyyy-MM-dd"),
-    store: "Narodni",
-    shift_name: "Day",
-    shift_type: "worked",
-    hours: 7.5,
-    hourly_rate: 150,
-  },
-  {
-    id: "a2",
-    work_date: format(subMonths(now, 0), "yyyy-MM-08"),
-    store: "Opletalova",
-    shift_name: "Day",
-    shift_type: "worked",
-    hours: 7,
-    hourly_rate: 150,
-  },
-  {
-    id: "a3",
-    work_date: format(subMonths(now, 1), "yyyy-MM-12"),
-    store: "Kaprova",
-    shift_name: "Evening",
-    shift_type: "replacement",
-    hours: 7,
-    hourly_rate: 150,
-  },
-  {
-    id: "a4",
-    work_date: format(subMonths(now, 1), "yyyy-MM-19"),
-    store: "Narodni",
-    shift_name: "Day",
-    shift_type: "worked",
-    hours: 7.5,
-    hourly_rate: 150,
-  },
-];
-function Picker({ lang, setLang }: { lang: Lang; setLang: (x: Lang) => void }) {
-  return (
-    <label className="language">
-      <Globe2 size={15} />
-      <select
-        aria-label="Language"
-        value={lang}
-        onChange={(e) => setLang(e.target.value as Lang)}
-      >
-        <option value="en">English</option>
-        <option value="ru">Русский</option>
-        <option value="cs">Čeština</option>
-      </select>
-    </label>
-  );
+
+function Picker({ lang, setLang }: { lang: Lang; setLang: (value: Lang) => void }) {
+  return <label className="language"><Globe2 size={15} /><select aria-label="Language" value={lang} onChange={(event) => setLang(event.target.value as Lang)}><option value="en">English</option><option value="ru">Русский</option><option value="cs">Čeština</option></select></label>;
 }
-function Insight({
-  icon,
-  label,
-  value,
-  note,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  note: string;
-}) {
-  return (
-    <article className="insight card">
-      <span className="metric-icon">{icon}</span>
-      <div>
-        <p>{label}</p>
-        <h2>{value}</h2>
-        <small>{note}</small>
-      </div>
-    </article>
-  );
+
+function Metric({ icon, label, value, foot, trend }: { icon: React.ReactNode; label: string; value: string; foot: string; trend?: number | null }) {
+  return <article className="an-metric"><div className="an-metric-top"><span className="an-icon">{icon}</span>{trend !== undefined && trend !== null && <span className={`an-change ${trend >= 0 ? "positive" : "negative"}`}>{trend >= 0 ? <ArrowUpRight size={14}/> : <ArrowDownRight size={14}/>} {Math.abs(trend)}%</span>}</div><p>{label}</p><strong>{value}</strong><small>{foot}</small></article>;
+}
+
+function TrendChart({ data, lang, mode }: { data: { label: string; hours: number; income: number }[]; lang: Lang; mode: "hours" | "income" }) {
+  const values = data.map((item) => mode === "hours" ? item.hours : item.income);
+  const max = Math.max(...values, 1);
+  const points = values.map((value, index) => ({ x: 34 + index * (532 / Math.max(values.length - 1, 1)), y: 154 - (value / max) * 118 }));
+  const line = points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+  const area = `${line} L ${points[points.length - 1]?.x ?? 566} 164 L ${points[0]?.x ?? 34} 164 Z`;
+  return <div className="an-trend-chart">
+    <div className="an-chart-scale"><span>{mode === "hours" ? `${Math.round(max)} h` : money(max)}</span><span>{mode === "hours" ? `${Math.round(max / 2)} h` : money(max / 2)}</span><span>0</span></div>
+    <svg viewBox="0 0 600 190" role="img" aria-label={mode === "hours" ? "Monthly hours trend" : "Monthly earnings trend"} preserveAspectRatio="none">
+      <defs><linearGradient id={`an-area-${mode}`} x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor={mode === "hours" ? "#8068f4" : "#20b68a"} stopOpacity=".28"/><stop offset="100%" stopColor={mode === "hours" ? "#8068f4" : "#20b68a"} stopOpacity="0"/></linearGradient></defs>
+      {[36, 95, 154].map((y) => <line key={y} x1="30" x2="570" y1={y} y2={y} className="an-grid-line"/>)}
+      <path d={area} fill={`url(#an-area-${mode})`}/>
+      <path d={line} fill="none" stroke={mode === "hours" ? "#8068f4" : "#20b68a"} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
+      {points.map((point, index) => <g key={data[index].label}><circle cx={point.x} cy={point.y} r="8" className="an-point-halo"/><circle cx={point.x} cy={point.y} r="4" fill={mode === "hours" ? "#8068f4" : "#20b68a"}/></g>)}
+    </svg>
+    <div className="an-chart-labels">{data.map((item) => <span key={item.label}>{item.label}</span>)}</div>
+  </div>;
 }
 
 export default function Analytics() {
-  const [lang, setLang] = useState<Lang>("en"),
-    [theme, setTheme] = useState<"light" | "dark">(
-      () => readThemeCookie() || "light",
-    ),
-    [shifts, setShifts] = useState<Shift[]>(seed),
-    [dataState, setDataState] = useState<"loading" | "ready" | "error">("loading"),
-    [dataError, setDataError] = useState(""),
-    [reloadKey, setReloadKey] = useState(0),
-    [mobileMenu, setMobileMenu] = useState(false);
+  const [lang, setLang] = useState<Lang>("en");
+  const [theme, setTheme] = useState<Theme>(() => readThemeCookie() || "light");
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [dataState, setDataState] = useState<"loading" | "ready" | "error">("loading");
+  const [dataError, setDataError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
+  const [mobileMenu, setMobileMenu] = useState(false);
+  const [period, setPeriod] = useState<Period>(6);
+  const [chartMode, setChartMode] = useState<"hours" | "income">("hours");
   const t = copy[lang];
+  const a = messages[lang];
+
   useEffect(() => {
     let active = true;
-    const savedLang = localStorage.getItem("worklog-lang") as Lang | null,
-      savedTheme = (readThemeCookie() ||
-        localStorage.getItem("worklog-theme")) as "light" | "dark" | null,
-      client = supabase;
-    if (savedLang) setLang(savedLang);
+    const savedLang = localStorage.getItem("worklog-lang") as Lang | null;
+    const savedTheme = (readThemeCookie() || localStorage.getItem("worklog-theme")) as Theme | null;
+    if (savedLang && ["en", "ru", "cs"].includes(savedLang)) setLang(savedLang);
     if (savedTheme) setTheme(savedTheme);
     document.documentElement.dataset.theme = savedTheme || "light";
-
     const load = async () => {
-      setDataState("loading");
-      setDataError("");
+      setDataState("loading"); setDataError("");
       try {
-        if (!client) throw new Error(t.loadError);
-        const { data, error: sessionError } = await withTimeout(client.auth.getSession(), 15000, t.loading);
-        if (sessionError) throw sessionError;
-        const sessionUser = data.session?.user;
-        if (!sessionUser) {
-          if (active) { setShifts([]); setDataState("ready"); }
-          return;
-        }
-        const rows = await withTimeout(loadUserShifts(sessionUser.id), 15000, t.loading);
+        if (!supabase) throw new Error(t.loadError);
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        const user = data.session?.user;
+        if (!user) { if (active) { setShifts([]); setDataState("ready"); } return; }
+        const rows = await loadUserShifts(user.id);
         if (!active) return;
-        setShifts(rows);
-        setDataState("ready");
+        setShifts(rows); setDataState("ready");
         void syncConnecteamIfConnected()
-          .then((result) => result.synced ? loadUserShifts(sessionUser.id) : null)
-          .then((freshRows) => { if (active && freshRows) setShifts(freshRows); })
-          .catch((error) => console.error("Background analytics refresh failed", error));
+          .then((result) => result.synced ? loadUserShifts(user.id) : null)
+          .then((fresh) => { if (active && fresh) setShifts(fresh); })
+          .catch((error) => console.error("Analytics background refresh failed", error));
       } catch (error) {
         console.error("Analytics data loading failed", error);
-        if (active) {
-          setDataError(error instanceof Error ? error.message : t.loadError);
-          setDataState("error");
-        }
+        if (active) { setDataError(error instanceof Error ? error.message : t.loadError); setDataState("error"); }
       }
     };
     void load();
     return () => { active = false; };
   }, [reloadKey]);
-  useEffect(() => {
-    localStorage.setItem("worklog-lang", lang);
-  }, [lang]);
+
+  useEffect(() => { localStorage.setItem("worklog-lang", lang); }, [lang]);
   useEffect(() => {
     localStorage.setItem("worklog-theme", theme);
     document.cookie = `worklog-theme=${theme}; Path=/; Max-Age=31536000; SameSite=Lax`;
     document.documentElement.dataset.theme = theme;
   }, [theme]);
-  const actualShifts = shifts.filter((shift) => isWorkedShift(shift)),
-    current = actualShifts.filter((s) => isSameMonth(parseISO(s.work_date), now)),
-    previous = actualShifts.filter((s) =>
-      isSameMonth(parseISO(s.work_date), subMonths(now, 1)),
-    );
-  const currentHours = current.reduce((sum, s) => sum + s.hours, 0),
-    previousHours = previous.reduce((sum, s) => sum + s.hours, 0),
-    currentIncome = current.reduce(
-      (sum, s) => sum + s.hours * s.hourly_rate,
-      0,
-    );
-  const stores = Object.entries(
-    current.reduce<Record<string, number>>(
-      (all, s) => ({ ...all, [s.store]: (all[s.store] || 0) + s.hours }),
-      {},
-    ),
-  ).sort((a, b) => b[1] - a[1]);
-  const max = Math.max(...stores.map(([, hours]) => hours), 1);
-  const months = [
-    subMonths(now, 3),
-    subMonths(now, 2),
-    subMonths(now, 1),
-    now,
-  ].map((month) => ({
-    label: format(month, "MMM", { locale: locales[lang] }),
-    hours: actualShifts
-      .filter((s) => isSameMonth(parseISO(s.work_date), month))
-      .reduce((sum, s) => sum + s.hours, 0),
-  }));
-  const maxMonth = Math.max(...months.map((m) => m.hours), 1);
-  const delta = previousHours
-    ? Math.round(((currentHours - previousHours) / previousHours) * 100)
-    : 0;
+
+  const now = new Date();
+  const actual = useMemo(() => shifts.filter(isWorkedShift), [shifts]);
+  const current = actual.filter((shift) => isSameMonth(parseISO(shift.work_date), now));
+  const previousMonth = subMonths(now, 1);
+  const previous = actual.filter((shift) => isSameMonth(parseISO(shift.work_date), previousMonth));
+  const currentHours = current.reduce((sum, shift) => sum + shift.hours, 0);
+  const previousHours = previous.reduce((sum, shift) => sum + shift.hours, 0);
+  const currentIncome = current.reduce((sum, shift) => sum + shift.hours * shift.hourly_rate, 0);
+  const previousIncome = previous.reduce((sum, shift) => sum + shift.hours * shift.hourly_rate, 0);
+  const hoursDelta = previousHours ? Math.round(((currentHours - previousHours) / previousHours) * 100) : null;
+  const incomeDelta = previousIncome ? Math.round(((currentIncome - previousIncome) / previousIncome) * 100) : null;
+
+  const trend = Array.from({ length: period }, (_, index) => {
+    const month = startOfMonth(subMonths(now, period - index - 1));
+    const rows = actual.filter((shift) => isSameMonth(parseISO(shift.work_date), month));
+    return {
+      label: format(month, "MMM", { locale: locales[lang] }),
+      hours: rows.reduce((sum, shift) => sum + shift.hours, 0),
+      income: rows.reduce((sum, shift) => sum + shift.hours * shift.hourly_rate, 0),
+    };
+  });
+  const byStore = Object.entries(current.reduce<Record<string, number>>((result, shift) => {
+    result[shift.store] = (result[shift.store] || 0) + shift.hours; return result;
+  }, {})).sort((left, right) => right[1] - left[1]);
+  const totalStoreHours = byStore.reduce((sum, item) => sum + item[1], 0);
+  const colors = ["#8068f4", "#20b68a", "#f3a64a", "#4c9de8", "#e779a8", "#8993a5"];
+  const weekdays = Array.from({ length: 7 }, (_, day) => {
+    const rows = current.filter((shift) => (parseISO(shift.work_date).getDay() + 6) % 7 === day);
+    return { label: format(addMonths(new Date(2024, 0, 1 + day), 0), "EEE", { locale: locales[lang] }), hours: rows.reduce((sum, shift) => sum + shift.hours, 0) };
+  });
+  const maxWeekday = Math.max(...weekdays.map((day) => day.hours), 1);
+  const bestDay = [...weekdays].sort((left, right) => right.hours - left.hours)[0];
+  const avgShift = current.length ? currentHours / current.length : 0;
+  const avgHourly = currentHours ? currentIncome / currentHours : 0;
+  const weeklyAverage = currentHours / Math.max(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() / 7, 1);
+  const hasData = actual.length > 0;
+
   return (
     <main className={`app-shell ${theme === "dark" ? "theme-dark" : ""}`}>
       <aside className="sidebar">
-        <div className="brand">
-          <Image
-            className="brand-logo"
-            src="/yk-logo.png"
-            alt="YK"
-            width={36}
-            height={36}
-            priority
-          />
-          <span className="brand-name">YK WorkLog</span>
-        </div>
-        <nav>
-          <Link href="/">
-            <CalendarDays />
-            {t.calendar}
-          </Link>
-          <a className="active">
-            <BarChart3 />
-            {t.analytics}
-          </a>
-        </nav>
-        <div className="sidebar-bottom">
-          <Picker lang={lang} setLang={setLang} />
-          <button
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-          >
-            {theme === "light" ? <Moon /> : <Sun />}
-            {theme === "light" ? t.dark : t.light}
-          </button>
-          <button>
-            <Settings2 />
-            {t.settings}
-          </button>
-        </div>
+        <div className="brand"><Image className="brand-logo" src="/yk-logo.png" alt="YK" width={36} height={36} priority/><span className="brand-name">YK WorkLog</span></div>
+        <nav><Link href="/"><CalendarDays/>{t.calendar}</Link><a className="active" aria-current="page"><BarChart3/>{t.analytics}</a></nav>
+        <div className="sidebar-bottom"><Picker lang={lang} setLang={setLang}/><button onClick={() => setTheme(theme === "light" ? "dark" : "light")}>{theme === "light" ? <Moon/> : <Sun/>}{theme === "light" ? t.dark : t.light}</button><button><Settings2/>{t.settings}</button></div>
       </aside>
-      <section className="content analytics-page">
-        <header>
-          <div>
-            <p className="eyebrow">{t.analyticsTitle}</p>
-            <h1>{t.analyticsGreeting}</h1>
-          </div>
-          <div className="period-badge">
-            <span>{t.thisMonth}</span>
-            <b>{format(now, "LLLL yyyy", { locale: locales[lang] })}</b>
-          </div>
+
+      <section className="content analytics-page analytics-v2">
+        <header className="an-header">
+          <div><p className="eyebrow">{a.subtitle}</p><h1>{a.title}</h1><p className="an-description">{a.description}</p></div>
+          <div className="an-month"><span>{a.thisMonth}</span><strong>{format(now, "LLLL yyyy", { locale: locales[lang] })}</strong></div>
         </header>
-        {dataState === "loading" ? (
-          <section className="card data-state-card" aria-live="polite">
-            <span className="spinner" /><strong>{t.loadingAnalytics}</strong>
+
+        {dataState === "loading" ? <section className="card data-state-card" aria-live="polite"><span className="spinner"/><strong>{a.loading}</strong></section>
+        : dataState === "error" ? <section className="card data-state-card data-state-error" role="alert"><strong>{a.error}</strong><p>{dataError}</p><button className="primary" onClick={() => setReloadKey((value) => value + 1)}><RefreshCw size={16}/>{a.retry}</button></section>
+        : <>
+          <section className="an-metrics">
+            <Metric icon={<Clock3/>} label={a.hours} value={`${currentHours.toLocaleString(lang)} ${a.hoursShort}`} foot={hoursDelta === null ? a.currentPeriod : `${hoursDelta >= 0 ? "+" : ""}${hoursDelta}% ${a.vsLast}`} trend={hoursDelta}/>
+            <Metric icon={<WalletCards/>} label={a.earnings} value={money(currentIncome)} foot={incomeDelta === null ? a.currentPeriod : `${incomeDelta >= 0 ? "+" : ""}${incomeDelta}% ${a.vsLast}`} trend={incomeDelta}/>
+            <Metric icon={<BriefcaseBusiness/>} label={a.shifts} value={String(current.length)} foot={`${avgShift.toFixed(1)} ${a.hoursShort} · ${a.average.toLowerCase()}`}/>
+            <Metric icon={<Activity/>} label={a.incomePerHour} value={money(avgHourly)} foot={a.thisMonth}/>
           </section>
-        ) : dataState === "error" ? (
-          <section className="card data-state-card data-state-error" role="alert">
-            <strong>{t.loadError}</strong>
-            <p>{dataError}</p>
-            <button className="primary" onClick={() => setReloadKey((value) => value + 1)}>{t.retry}</button>
-          </section>
-        ) : <>
-        <div className="insights">
-          <Insight
-            icon={<Clock3 />}
-            label={t.totalHours}
-            value={`${currentHours} h`}
-            note={
-              delta === 0
-                ? t.thisMonth
-                : `${delta > 0 ? "+" : ""}${delta}% ${t.comparison.toLowerCase()}`
-            }
-          />
-          <Insight
-            icon={<WalletCards />}
-            label={t.income}
-            value={money(currentIncome)}
-            note={`${current.length} ${t.shifts}`}
-          />
-          <Insight
-            icon={<TrendingUp />}
-            label={t.averageShift}
-            value={`${current.length ? (currentHours / current.length).toFixed(1) : "0"} h`}
-            note={t.basedOnHours}
-          />
-          <Insight
-            icon={<MapPin />}
-            label={t.bestStore}
-            value={stores[0] ? getStoreDisplayName(stores[0][0], lang) : "—"}
-            note={stores[0] ? `${stores[0][1]} h` : t.empty}
-          />
-        </div>
-        <div className="analytics-grid">
-          <section className="card comparison-card">
-            <div className="card-head">
-              <div>
-                <h2>{t.comparison}</h2>
-                <p>
-                  {t.thisMonth} · {t.previousMonth}
-                </p>
+
+          <section className="an-main-chart card">
+            <div className="an-section-head">
+              <div><div className="an-kicker"><TrendingUp size={14}/>{a.trend}</div><h2>{a.trendHint}</h2></div>
+              <div className="an-chart-actions">
+                <div className="an-segment"><button className={chartMode === "hours" ? "selected" : ""} onClick={() => setChartMode("hours")}>{a.hoursLabel}</button><button className={chartMode === "income" ? "selected" : ""} onClick={() => setChartMode("income")}>{a.incomeLabel}</button></div>
+                <label className="an-period"><select value={period} onChange={(event) => setPeriod(Number(event.target.value) as Period)}><option value={6}>{a.last6}</option><option value={12}>{a.last12}</option></select><ChevronDown size={14}/></label>
               </div>
             </div>
-            <div className="compare-columns">
-              <div>
-                <span>{t.previousMonth}</span>
-                <b>{previousHours} h</b>
-                <i
-                  style={{
-                    width: `${Math.max((previousHours / Math.max(currentHours, previousHours, 1)) * 100, 6)}%`,
-                  }}
-                />
-              </div>
-              <div className="current">
-                <span>{t.thisMonth}</span>
-                <b>{currentHours} h</b>
-                <i
-                  style={{
-                    width: `${Math.max((currentHours / Math.max(currentHours, previousHours, 1)) * 100, 6)}%`,
-                  }}
-                />
-              </div>
-            </div>
+            {hasData ? <><div className="an-chart-summary"><strong>{chartMode === "hours" ? `${currentHours} ${a.hoursShort}` : money(currentIncome)}</strong><span>{a.currentPeriod}</span></div><TrendChart data={trend} lang={lang} mode={chartMode}/></> : <div className="empty an-empty">{a.noShifts}</div>}
           </section>
-          <section className="card trend-card">
-            <div className="card-head">
-              <div>
-                <h2>{t.monthTrend}</h2>
-                <p>{t.totalHours}</p>
-              </div>
-            </div>
-            <div className="trend-bars">
-              {months.map((item) => (
-                <div key={item.label}>
-                  <span
-                    className="trend-fill"
-                    style={{
-                      height: `${Math.max((item.hours / maxMonth) * 100, 5)}%`,
-                    }}
-                  />
-                  <b>{item.hours}h</b>
-                  <small>{item.label}</small>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-        <section className="card store-card">
-          <div className="card-head">
-            <div>
-              <h2>{t.storePerformance}</h2>
-              <p>{t.basedOnHours}</p>
-            </div>
-            <span className="store-count">{stores.length}</span>
+
+          <div className="an-lower-grid">
+            <section className="card an-panel">
+              <div className="an-section-head"><div><div className="an-kicker"><MapPin size={14}/>{a.locations}</div><h2>{a.locationsHint}</h2></div><span className="an-count">{byStore.length}</span></div>
+              {byStore.length ? <div className="an-store-content">
+                <div className="an-donut-wrap"><div className="an-donut" style={{ background: `conic-gradient(${byStore.map(([name, hours], index) => `${colors[index % colors.length]} 0 ${Math.max(hours / Math.max(totalStoreHours, 1) * 360, 0)}deg`).reduce((acc, part, index) => { const previous = byStore.slice(0, index).reduce((sum, item) => sum + item[1] / Math.max(totalStoreHours, 1) * 360, 0); return acc + `, ${colors[index % colors.length]} ${previous}deg ${previous + byStore[index][1] / Math.max(totalStoreHours, 1) * 360}deg`; }, "")})` }}><div><strong>{Math.round(totalStoreHours)}</strong><span>{a.hoursShort}</span></div></div></div>
+                <div className="an-legend">{byStore.map(([name, hours], index) => <div className="an-legend-row" key={name}><i style={{ background: colors[index % colors.length] }}/><span>{getStoreDisplayName(name, lang)}</span><b>{hours.toLocaleString(lang)} h</b><small>{Math.round(hours / Math.max(totalStoreHours, 1) * 100)}%</small></div>)}</div>
+              </div> : <div className="empty">{a.noData}</div>}
+              {byStore[0] && <div className="an-highlight"><span>{a.topLocation}</span><strong>{getStoreDisplayName(byStore[0][0], lang)}</strong></div>}
+            </section>
+
+            <section className="card an-panel">
+              <div className="an-section-head"><div><div className="an-kicker"><CalendarDays size={14}/>{a.weekdays}</div><h2>{a.weekdaysHint}</h2></div></div>
+              {current.length ? <div className="an-week-bars">{weekdays.map((day, index) => <div className="an-week-col" key={day.label}><strong>{day.hours ? day.hours.toLocaleString(lang) : "–"}</strong><div className="an-week-track"><i style={{ height: `${Math.max(day.hours / maxWeekday * 100, day.hours ? 5 : 0)}%`, background: colors[index % colors.length] }}/></div><span>{day.label}</span></div>)}</div> : <div className="empty">{a.noData}</div>}
+              <div className="an-mini-stats"><div><span>{a.bestDay}</span><strong>{bestDay.hours ? bestDay.label : "—"}</strong></div><div><span>{a.avgWeek}</span><strong>{weeklyAverage.toFixed(1)} h</strong></div></div>
+            </section>
           </div>
-          {stores.length ? (
-            <div className="store-table">
-              {stores.map(([name, hours], index) => (
-                <div className="store-row" key={name}>
-                  <span className="rank">0{index + 1}</span>
-                  <b>{getStoreDisplayName(name, lang)}</b>
-                  <div className="track">
-                    <i style={{ width: `${(hours / max) * 100}%` }} />
-                  </div>
-                  <span>{hours} h</span>
-                  <strong>
-                    {Math.round((hours / Math.max(currentHours, 1)) * 100)}%
-                  </strong>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="empty">{t.empty}</div>
-          )}
-        </section>
+          <div className="an-footer-note"><span><Activity size={15}/>{a.currentPeriod}</span><span>{current.length} {a.shifts.toLowerCase()} · {a.previousPeriod}: {previousHours} h</span></div>
         </>}
       </section>
-      <MobileNav
-        active="analytics"
-        calendar={t.calendar}
-        analytics={t.analytics}
-        settings={t.settings}
-        onSettings={() => setMobileMenu(true)}
-      />
-      {mobileMenu && (
-        <div className="overlay mobile-sheet-overlay" onMouseDown={() => setMobileMenu(false)}>
-          <section
-            className="mobile-sheet"
-            role="dialog"
-            aria-modal="true"
-            aria-label={t.settings}
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <span className="sheet-handle" />
-            <div className="mobile-sheet-head">
-              <h2>{t.settings}</h2>
-              <button type="button" className="close" onClick={() => setMobileMenu(false)} aria-label={t.close}>
-                ×
-              </button>
-            </div>
-            <div className="mobile-setting-row">
-              <span>{t.theme}</span>
-              <button
-                type="button"
-                className="setting-action"
-                onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-              >
-                {theme === "light" ? <Moon /> : <Sun />}
-                {theme === "light" ? t.dark : t.light}
-              </button>
-            </div>
-            <div className="mobile-setting-row">
-              <span>{t.language}</span>
-              <Picker lang={lang} setLang={setLang} />
-            </div>
-          </section>
-        </div>
-      )}
+
+      <MobileNav active="analytics" calendar={t.calendar} analytics={t.analytics} settings={t.settings} onSettings={() => setMobileMenu(true)}/>
+      {mobileMenu && <div className="overlay mobile-sheet-overlay" onMouseDown={() => setMobileMenu(false)}><section className="mobile-sheet" role="dialog" aria-modal="true" aria-label={t.settings} onMouseDown={(event) => event.stopPropagation()}><span className="sheet-handle"/><div className="mobile-sheet-head"><h2>{t.settings}</h2><button type="button" className="close" onClick={() => setMobileMenu(false)} aria-label={a.close}>×</button></div><div className="mobile-setting-row"><span>{a.theme}</span><button type="button" className="setting-action" onClick={() => setTheme(theme === "light" ? "dark" : "light")}>{theme === "light" ? <Moon/> : <Sun/>}{theme === "light" ? t.dark : t.light}</button></div><div className="mobile-setting-row"><span>{a.language}</span><Picker lang={lang} setLang={setLang}/></div></section></div>}
     </main>
   );
 }
