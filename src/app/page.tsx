@@ -750,6 +750,8 @@ export default function Home() {
         calendar={t.calendar}
         analytics={t.analytics}
         profile={lang === "ru" ? "Профиль" : lang === "cs" ? "Profil" : "Profile"}
+        settings={t.settings}
+        onSettings={() => setDialog("quick")}
       />
       {dialog === "quick" && (
         <div className="overlay mobile-sheet-overlay" onMouseDown={() => setDialog(null)}>
@@ -812,8 +814,7 @@ export default function Home() {
             </button>
             <div className="dialog-body">
               <p className="eyebrow">{t.settings}</p>
-              <h2>{t.rate}</h2>
-              <p>{t.rateNote}</p>
+              <h2>{t.settings}</h2>
               <label>
                 {profileText[lang].name} <span className="subtle">{profileText[lang].nameHint}</span>
                 <input name="name" type="text" maxLength={80} defaultValue={name} />
