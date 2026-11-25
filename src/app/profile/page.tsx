@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Moon, Sun, UserRound, WalletCards, Target, Globe2, Save, LoaderCircle } from "lucide-react";
+import { ArrowLeft, Moon, Sun, UserRound, Target, Globe2, Save, LoaderCircle, CalendarDays, BarChart3 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Lang, money } from "@/lib/worklog";
 import { MobileNav } from "@/components/mobile-nav";
@@ -149,8 +149,8 @@ export default function ProfilePage() {
       <aside className="sidebar">
         <div className="brand"><Image className="brand-logo" src="/yk-logo.png" alt="YK" width={36} height={36} priority/><span className="brand-name">YK WorkLog</span></div>
         <nav>
-          <Link href="/"><CalendarDaysIcon />{t.calendar}</Link>
-          <Link href="/analytics"><BarChart3Icon />{t.analytics}</Link>
+          <Link href="/"><CalendarDays />{t.calendar}</Link>
+          <Link href="/analytics"><BarChart3 />{t.analytics}</Link>
           <a className="active" aria-current="page"><UserRound />{t.profile}</a>
         </nav>
         <div className="sidebar-bottom">
