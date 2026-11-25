@@ -330,6 +330,18 @@ export default function Home() {
     }
     return groups;
   }, [shifts]);
+  const mostVisitedStore = useMemo(() => {
+    const visits = new Map<string, number>();
+    for (const shift of shifts) {
+      const name = shift.store.trim();
+      if (!name) continue;
+      const key = name.toLocaleLowerCase();
+      visits.set(key, (visits.get(key) ?? 0) + 1);
+    }
+    if (visits.size === 0) return "Narodni";
+    const [topName] = [...visits.entries()].sort((a, b) => b[1] - a[1])[0];
+    return shifts.find((shift) => shift.store.trim().toLocaleLowerCase() === topName)?.store ?? "Narodni";
+  }, [shifts]);
   const upcomingShiftsTitle = {
     en: "Upcoming shifts",
     ru: "Предстоящие смены",
@@ -661,6 +673,7 @@ export default function Home() {
             t={t}
             lang={lang}
             editing={editing}
+            defaultStoreName={mostVisitedStore}
             date={date}
             dayShifts={shifts.filter((shift) => shift.work_date === date)}
             onSelectShift={setEditing}
@@ -922,6 +935,7 @@ function ShiftCard({
   t,
   lang,
   editing,
+  defaultStoreName,
   date,
   dayShifts,
   onSelectShift,
@@ -935,6 +949,7 @@ function ShiftCard({
   t: (typeof copy)[Lang];
   lang: Lang;
   editing: Shift | null;
+  defaultStoreName: string;
   date: string;
   dayShifts: Shift[];
   onSelectShift: (shift: Shift | null) => void;
@@ -945,7 +960,11 @@ function ShiftCard({
   isSyncingDay: boolean;
   syncDayError: string;
 }) {
-  const initialStore = stores.find((store) => store.name === editing?.store) || stores[0];
+  const initialStore =
+    stores.find((store) => store.name === editing?.store) ||
+    stores.find((store) => store.name.toLocaleLowerCase() === defaultStoreName.toLocaleLowerCase()) ||
+    stores.find((store) => store.name === "Narodni") ||
+    stores[0];
   const initialShift = Math.max(
     0,
     initialStore.shifts.findIndex((shift) =>
