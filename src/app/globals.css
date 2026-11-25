@@ -628,9 +628,9 @@ h2 {
 .primary svg {
   width: 18px;
 }
-.metrics {
+ .metrics {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   margin: 35px 0 18px;
 }
@@ -1540,7 +1540,7 @@ h2 {
     bottom: 0;
     left: 0;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 0;
     margin: 0;
     padding: 7px max(10px, env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
