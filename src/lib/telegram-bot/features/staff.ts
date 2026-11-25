@@ -5,6 +5,64 @@ import { addDays, escapeHtml, formatDate } from "../utils";
 const STAFF_LOCATIONS = ["Karlovy Lázně", "Revoluční", "Národní", "Opletalova", "Kaprova", "Karlák", "Karlova", "Karlín"];
 const EMPLOYEES_PER_PAGE = 20;
 
+async function localizeStaff(chat: number, value: string): Promise<string> {
+  const { data } = await createAdminClient().from("telegram_accounts").select("language").eq("chat_id", chat).maybeSingle();
+  const lang = data?.language === "ru" || data?.language === "cs" ? data.language : "en";
+  const translations: Record<string, [string, string]> = {
+    "УПРАВЛЕНИЕ ПЕРСОНАЛОМ": ["STAFF MANAGEMENT", "SPRÁVA ZAMĚSTNANCŮ"],
+    "Сотрудники и рабочие смены": ["Employees and work shifts", "Zaměstnanci a pracovní směny"],
+    "Выбери раздел:": ["Choose a section:", "Vyber sekci:"],
+    "Расписание": ["Schedule", "Rozvrh"],
+    "Топ сотрудников": ["Top employees", "Nejlepší zaměstnanci"],
+    "График сотрудника": ["Employee schedule", "Rozvrh zaměstnance"],
+    "Ждут смену": ["Waiting for shifts", "Čekají na směnu"],
+    "В главное меню": ["Main menu", "Hlavní nabídka"],
+    "Предстоящие смены": ["Upcoming shifts", "Nadcházející směny"],
+    "Список смен · за месяц": ["Shift list · this month", "Seznam směn · tento měsíc"],
+    "Расписание · на неделю": ["Schedule · this week", "Rozvrh · tento týden"],
+    "Выбери локацию:": ["Choose a location:", "Vyber místo:"],
+    "Все локации": ["All locations", "Všechna místa"],
+    "К расписанию": ["Back to schedule", "Zpět na rozvrh"],
+    "РАСПИСАНИЕ СОТРУДНИКОВ": ["EMPLOYEE SCHEDULE", "ROZVRH ZAMĚSTNANCŮ"],
+    "Сначала выбери точку, затем дату": ["Choose a store, then a date", "Nejprve vyber provozovnu a potom datum"],
+    "Локация": ["Location", "Místo"],
+    "ВСЕ ЛОКАЦИИ": ["ALL LOCATIONS", "VŠECHNA MÍSTA"],
+    "Выбери дату:": ["Choose a date:", "Vyber datum:"],
+    "Вчера": ["Yesterday", "Včera"], "Сегодня": ["Today", "Dnes"], "Завтра": ["Tomorrow", "Zítra"],
+    "На какую дату показать смены?": ["Which date should shifts be shown for?", "Pro jaké datum zobrazit směny?"],
+    "Другая дата": ["Another date", "Jiné datum"],
+    "К локациям": ["Back to locations", "Zpět na místa"],
+    "Смен не найдено.": ["No shifts found.", "Nebyly nalezeny žádné směny."],
+    "Выбрать другую локацию": ["Choose another location", "Vybrat jiné místo"],
+    "Локация не указана": ["Location not specified", "Místo není uvedeno"],
+    "Сотрудники не назначены": ["No employees assigned", "Nejsou přiřazeni žádní zaměstnanci"],
+    "Предстоящих смен не найдено.": ["No upcoming shifts found.", "Nebyly nalezeny žádné nadcházející směny."],
+    "Смен за выбранный период не найдено.": ["No shifts found for the selected period.", "Pro vybrané období nebyly nalezeny žádné směny."],
+    "Всего смен:": ["Total shifts:", "Celkem směn:"],
+    "Смен на эту дату не найдено.": ["No shifts found for this date.", "Pro toto datum nebyly nalezeny žádné směny."],
+    "Локации в синхронизации:": ["Locations in sync:", "Místa v synchronizaci:"],
+    "В базе нет смен за эту дату. Проверь синхронизацию Connecteam.": ["There are no shifts for this date in the database. Check Connecteam sync.", "V databázi pro toto datum nejsou žádné směny. Zkontroluj synchronizaci Connecteam."],
+    "Всего сотрудников:": ["Total employees:", "Celkem zaměstnanců:"],
+    "Выбери сотрудника из списка.": ["Choose an employee from the list.", "Vyber zaměstnance ze seznamu."],
+    "Всего активных сотрудников:": ["Active employees:", "Aktivní zaměstnanci:"],
+    "Активные сотрудники не найдены. Проверь синхронизацию Connecteam.": ["No active employees found. Check Connecteam sync.", "Nebyli nalezeni žádní aktivní zaměstnanci. Zkontroluj synchronizaci Connecteam."],
+    "Рабочая неделя и месячная статистика": ["Work week and monthly statistics", "Pracovní týden a měsíční statistiky"],
+    "На этой неделе смен не запланировано.": ["No shifts scheduled this week.", "Na tento týden nejsou naplánovány žádné směny."],
+    "Всего часов за месяц:": ["Total hours this month:", "Celkem hodin za měsíc:"],
+    "К списку сотрудников": ["Back to employees", "Zpět na zaměstnance"],
+    "Назад": ["Back", "Zpět"],
+    "Список смен · МЕСЯЦ": ["SHIFT LIST · MONTH", "SEZNAM SMĚN · MĚSÍC"],
+    "РАСПИСАНИЕ · НЕДЕЛЯ": ["SCHEDULE · WEEK", "ROZVRH · TÝDEN"],
+    "ПРЕДСТОЯЩИЕ СМЕНЫ": ["UPCOMING SHIFTS", "NADCHÁZEJÍCÍ SMĚNY"],
+    "СПИСОК СМЕН · МЕСЯЦ": ["SHIFT LIST · MONTH", "SEZNAM SMĚN · MĚSÍC"],
+    "РАСПИСАНИЕ · ВСЕ ЛОКАЦИИ": ["SCHEDULE · ALL LOCATIONS", "ROZVRH · VŠECHNA MÍSTA"],
+  };
+  if (lang === "ru") return value;
+  const entries = Object.entries(translations).sort((a, b) => b[0].length - a[0].length);
+  return entries.reduce((text, [source, translated]) => text.split(source).join(translated[lang === "cs" ? 1 : 0]), value);
+}
+
+
 type StaffShift = {
   connecteam_shift_id?: string;
   work_date: string;
@@ -29,7 +87,7 @@ function staffNav(index?: number, backTo: "loc" | "dates" = "loc") {
   return [{ text: "⬅️ Назад", callback_data: backTo === "loc" ? "staff:back:loc" : `staff:back:dates:${index}` }, { text: "🏠 В меню", callback_data: "staff:menu" }];
 }
 async function renderStaff(chat: number, messageId: number | undefined, text: string, keyboard: { text: string; callback_data: string }[][]) {
-  const payload = { chat_id: chat, text, parse_mode: "HTML", reply_markup: { inline_keyboard: keyboard } };
+  const localizedText = await localizeStaff(chat, text);\n  const localizedKeyboard = await Promise.all(keyboard.map(async row => Promise.all(row.map(async button => ({ ...button, text: await localizeStaff(chat, button.text) })))));\n  const payload = { chat_id: chat, text: localizedText, parse_mode: "HTML", reply_markup: { inline_keyboard: localizedKeyboard } };
   if (messageId) {
     try {
       await telegramApi("editMessageText", { ...payload, message_id: messageId });
