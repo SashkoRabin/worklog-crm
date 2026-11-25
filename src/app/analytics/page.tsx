@@ -296,7 +296,7 @@ export default function Analytics() {
           <Insight
             icon={<MapPin />}
             label={t.bestStore}
-            value={stores[0]?.[0] || "—"}
+            value={stores[0] ? getStoreDisplayName(stores[0][0], lang) : "—"}
             note={stores[0] ? `${stores[0][1]} h` : t.empty}
           />
         </div>
@@ -367,7 +367,7 @@ export default function Analytics() {
               {stores.map(([name, hours], index) => (
                 <div className="store-row" key={name}>
                   <span className="rank">0{index + 1}</span>
-                  <b>{name}</b>
+                  <b>{getStoreDisplayName(name, lang)}</b>
                   <div className="track">
                     <i style={{ width: `${(hours / max) * 100}%` }} />
                   </div>
