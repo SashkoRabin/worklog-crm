@@ -61,3 +61,8 @@ export const shiftLabels = {
   replacement: "Замена",
   assigned: "Выданная смена",
 } as const;
+
+export function getStoreDisplayName(name: string, lang: "en" | "ru" | "cs"): string {
+  if (name.trim().toLocaleLowerCase() !== "склад" && name.trim().toLocaleLowerCase() !== "warehouse" && name.trim().toLocaleLowerCase() !== "sklad") return name;
+  return lang === "en" ? "Warehouse" : lang === "cs" ? "Sklad" : "Склад";
+}
