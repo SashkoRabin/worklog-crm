@@ -1,5 +1,6 @@
 import { createAdminClient, telegramApi } from "@/lib/telegram-server";
 import { datePartsInZone, escapeHtml } from "../utils";
+import { localizeStaff } from "./staff";
 
 type StaffShift = {
   connecteam_shift_id: string;
@@ -80,9 +81,9 @@ export async function showStaffLeaderboard(chatId: number, messageId?: number) {
 
   const payload = {
     chat_id: chatId,
-    text: lines.join("\n"),
+    text: await localizeStaff(chatId, lines.join("\n")),
     parse_mode: "HTML",
-    reply_markup: { inline_keyboard: [[{ text: "⬅️ Сотрудники", callback_data: "staff:home" }]] },
+    reply_markup: { inline_keyboard: [[{ text: await localizeStaff(chatId, "⬅️ Сотрудники"), callback_data: "staff:home" }]] },
   };
   if (messageId) {
     try {
