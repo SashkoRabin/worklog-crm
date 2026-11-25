@@ -19,6 +19,7 @@ import { loadUserShifts, syncConnecteamIfConnected } from "@/lib/connecteam-clie
 import { copy, isWorkedShift, Lang, locales, money, Shift } from "@/lib/worklog";
 import { supabase } from "@/lib/supabase";
 import { MobileNav } from "@/components/mobile-nav";
+import { getStoreDisplayName } from "@/lib/stores";
 
 const now = new Date();
 async function withTimeout<T>(promise: Promise<T>, timeoutMs = 15000, timeoutMessage = "Request timed out"): Promise<T> {
