@@ -5,6 +5,7 @@ create table public.profiles (
   display_name text check (char_length(display_name) <= 80),
   monthly_goal_type text check (monthly_goal_type in ('income', 'hours')),
   monthly_goal_value numeric check (monthly_goal_value > 0),
+  check ((monthly_goal_type is null and monthly_goal_value is null) or (monthly_goal_type is not null and monthly_goal_value is not null)),
   created_at timestamptz not null default now()
 );
 
