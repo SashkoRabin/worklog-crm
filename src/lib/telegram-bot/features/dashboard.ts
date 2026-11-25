@@ -6,6 +6,7 @@ import { addDays, datePartsInZone, escapeHtml, formatDate, money } from "../util
 
 import { appUrl, menuKeyboard } from "../menu";
 import { hasNeedShifts } from "./need-shifts";
+import { getStoreDisplayName } from "@/lib/stores";
 
 
 export async function showScheduleMenu(chatId: number, lang: Lang) {
@@ -66,7 +67,7 @@ export async function showUpcomingShifts(chatId: number, linkedUserId: string, l
     lines.push(`<b>📅 ${formatDate(date, lang)}</b>`);
     for (const shift of items) {
       const time = shift.shift_name.match(/\d{1,2}:\d{2}\s*[–—-]\s*\d{1,2}:\d{2}/)?.[0] || shift.shift_name;
-      lines.push(`• <b>${escapeHtml(shift.store)}</b> · ${escapeHtml(time)}`);
+      lines.push(`• <b>${escapeHtml(getStoreDisplayName(shift.store, lang))}</b> · ${escapeHtml(time)}`);
     }
     lines.push("");
   }
