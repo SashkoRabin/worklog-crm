@@ -205,7 +205,7 @@ export default function Analytics() {
   const bestDay = [...weekdays].sort((left, right) => right.hours - left.hours)[0];
   const avgShift = current.length ? currentHours / current.length : 0;
   const avgHourly = currentHours ? currentIncome / currentHours : 0;
-  const weeklyAverage = currentHours / Math.max(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() / 7, 1);
+  const weeklyAverage = currentHours / Math.max(now.getDate() / 7, 1);
   const hasData = actual.length > 0;
 
   return (
