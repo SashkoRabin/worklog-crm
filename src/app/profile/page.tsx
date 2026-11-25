@@ -156,6 +156,36 @@ export default function ProfilePage() {
     document.documentElement.dataset.theme=theme;
   },[theme]);
 
+  const locale = lang === "ru" ? ru : lang === "cs" ? cs : enUS;
+  const now = new Date();
+  const todayKey = now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
+  const currentMonth = todayKey.slice(0,7);
+  const monthSummaries = useMemo<MonthSalary[]>(()=>{
+    const map = new Map<string,MonthSalary>();
+    const ensure=(month:string)=>{if(!map.has(month))map.set(month,{month,earned:0,received:0,unpaid:0,lastPaidAt:null});return map.get(month)!;};
+    for(const shift of shifts){if(shift.work_date>todayKey)continue;ensure(shift.work_date.slice(0,7)).earned+=Number(shift.hours||0)*Number(shift.hourly_rate||0);}
+    for(const payment of payments){const row=ensure(payment.period_month.slice(0,7));row.received+=Number(payment.amount||0);if(!row.lastPaidAt||payment.paid_at>row.lastPaidAt)row.lastPaidAt=payment.paid_at;}
+    for(const row of map.values())row.unpaid=Math.max(0,row.earned-row.received);
+    ensure(currentMonth);
+    return Array.from(map.values()).sort((a,b)=>b.month.localeCompare(a.month));
+  },[shifts,payments,currentMonth,todayKey]);
+  const [selectedSalaryMonth,setSelectedSalaryMonth]=useState(currentMonth);
+  const selectedSalary=monthSummaries.find(row=>row.month===selectedSalaryMonth)||monthSummaries[0];
+  const totalOwed=monthSummaries.reduce((sum,row)=>sum+row.unpaid,0);
+  const monthLabel=(month:string)=>format(parseISO(month+"-01"),"LLLL yyyy",{locale});
+  const dateLabel=(date:string)=>format(parseISO(date.slice(0,10)),"d MMM yyyy",{locale});
+  async function addSalaryPayment(amount:number,successMessage:string){
+    if(!userId||!supabase||!Number.isFinite(amount)||amount<=0)return;
+    setPaymentState("saving");setPaymentError("");setPaymentNotice("");
+    const paidAt=new Date(paymentDate+"T12:00:00").toISOString();
+    const periodMonth=selectedSalaryMonth+"-01";
+    const {data,error:insertError}=await supabase.from("salary_payments").insert({user_id:userId,period_month:periodMonth,amount,paid_at:paidAt}).select("id,period_month,amount,paid_at").single();
+    if(insertError){console.error("Salary payment insert failed",insertError);setPaymentState("error");setPaymentError(t.paymentError);return;}
+    setPayments(previous=>[data as SalaryPayment,...previous]);setPaymentAmount("");setPaymentState("saved");setPaymentNotice(successMessage);
+    window.setTimeout(()=>setPaymentState("idle"),2200);
+  }
+  async function recordPartialPayment(){const amount=Number(paymentAmount);if(!Number.isFinite(amount)||amount<=0){setPaymentError(t.paymentInvalid);return;}await addSalaryPayment(amount,t.paymentSaved);}
+  async function settleOutstanding(){const unpaid=selectedSalary?.unpaid||0;if(unpaid<=0){setPaymentNotice(t.noDebt);return;}await addSalaryPayment(unpaid,t.paymentSettled);}
   const numericRate=Math.max(0,Number(rate)||0);
   const numericGoal=Math.max(0,Number(goalValue)||0);
   const estimate=useMemo(()=>{
