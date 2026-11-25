@@ -142,7 +142,7 @@ export default function Analytics() {
       setDataState("loading");
       setDataError("");
       try {
-        if (!client) throw new Error(copy[lang].loadError);
+        if (!client) throw new Error(t.loadError);
         const { data, error: sessionError } = await withTimeout(client.auth.getSession(), 15000, t.loading);
         if (sessionError) throw sessionError;
         const sessionUser = data.session?.user;
@@ -161,7 +161,7 @@ export default function Analytics() {
       } catch (error) {
         console.error("Analytics data loading failed", error);
         if (active) {
-          setDataError(error instanceof Error ? error.message : copy[lang].loadError);
+          setDataError(error instanceof Error ? error.message : t.loadError);
           setDataState("error");
         }
       }
