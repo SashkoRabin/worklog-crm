@@ -5,7 +5,7 @@ import { addDays, escapeHtml, formatDate } from "../utils";
 const STAFF_LOCATIONS = ["Karlovy Lázně", "Revoluční", "Národní", "Opletalova", "Kaprova", "Karlák", "Karlova", "Karlín"];
 const EMPLOYEES_PER_PAGE = 20;
 
-async function localizeStaff(chat: number, value: string): Promise<string> {
+export async function localizeStaff(chat: number, value: string): Promise<string> {
   const { data } = await createAdminClient().from("telegram_accounts").select("language").eq("chat_id", chat).maybeSingle();
   const lang = data?.language === "ru" || data?.language === "cs" ? data.language : "en";
   const translations: Record<string, [string, string]> = {
