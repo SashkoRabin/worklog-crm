@@ -2374,3 +2374,21 @@ h2 {
   .an-goal-values strong { font-size:21px; }
   .an-goal-empty { align-items:flex-start; flex-direction:column; }
 }
+
+/* Profile actions and resilient first-visit layout */
+.profile-goal-actions { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-top:18px; }
+.profile-goal-actions .profile-save { margin-top:0; }
+.profile-delete-goal { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:44px; padding:10px 14px; border:1px solid #e9b7bf; border-radius:10px; color:#b33f50; background:transparent; font-size:12px; font-weight:750; }
+.profile-delete-goal:hover { background:#fff0f2; border-color:#d98996; }
+.profile-delete-goal:disabled { opacity:.55; cursor:wait; }
+.profile-notice { grid-column:1/-1; color:#16956f; font-size:12px; font-weight:650; }
+.profile-fallback-note { grid-column:1/-1; color:var(--muted); font-size:11px; line-height:1.5; }
+.profile-goal-card { grid-column:1/-1; }
+.profile-card .profile-save { margin-top:16px; }
+.theme-dark .profile-delete-goal { border-color:#70434b; color:#f1aab4; }
+.theme-dark .profile-delete-goal:hover { background:#3a2428; }
+@media(max-width:700px) {
+  .profile-goal-card { grid-column:auto; }
+  .profile-goal-actions { align-items:stretch; flex-direction:column; }
+  .profile-goal-actions .profile-save,.profile-delete-goal { width:100%; }
+}
