@@ -83,6 +83,16 @@ const readThemeCookie = (): Theme | null => {
   return (document.cookie.match(/(?:^|; )worklog-theme=(light|dark)(?:;|$)/)?.[1] as Theme) || null;
 };
 
+function donutGradient(items: [string, number][], total: number, colors: string[]) {
+  let cursor = 0;
+  const stops = items.map(([, value], index) => {
+    const start = cursor;
+    cursor += value / Math.max(total, 1) * 360;
+    return `${colors[index % colors.length]} ${start}deg ${cursor}deg`;
+  });
+  return `conic-gradient(${stops.join(", ")})`;
+}
+
 function Picker({ lang, setLang }: { lang: Lang; setLang: (value: Lang) => void }) {
   return <label className="language"><Globe2 size={15} /><select aria-label="Language" value={lang} onChange={(event) => setLang(event.target.value as Lang)}><option value="en">English</option><option value="ru">Русский</option><option value="cs">Čeština</option></select></label>;
 }
@@ -237,7 +247,7 @@ export default function Analytics() {
             <section className="card an-panel">
               <div className="an-section-head"><div><div className="an-kicker"><MapPin size={14}/>{a.locations}</div><h2>{a.locationsHint}</h2></div><span className="an-count">{byStore.length}</span></div>
               {byStore.length ? <div className="an-store-content">
-                <div className="an-donut-wrap"><div className="an-donut" style={{ background: `conic-gradient(${byStore.map(([name, hours], index) => `${colors[index % colors.length]} 0 ${Math.max(hours / Math.max(totalStoreHours, 1) * 360, 0)}deg`).reduce((acc, part, index) => { const previous = byStore.slice(0, index).reduce((sum, item) => sum + item[1] / Math.max(totalStoreHours, 1) * 360, 0); return acc + `, ${colors[index % colors.length]} ${previous}deg ${previous + byStore[index][1] / Math.max(totalStoreHours, 1) * 360}deg`; }, "")})` }}><div><strong>{Math.round(totalStoreHours)}</strong><span>{a.hoursShort}</span></div></div></div>
+                <div className="an-donut-wrap"><div className="an-donut" style={{ background: donutGradient(byStore, totalStoreHours, colors) }}}><div><strong>{Math.round(totalStoreHours)}</strong><span>{a.hoursShort}</span></div></div></div>
                 <div className="an-legend">{byStore.map(([name, hours], index) => <div className="an-legend-row" key={name}><i style={{ background: colors[index % colors.length] }}/><span>{getStoreDisplayName(name, lang)}</span><b>{hours.toLocaleString(lang)} h</b><small>{Math.round(hours / Math.max(totalStoreHours, 1) * 100)}%</small></div>)}</div>
               </div> : <div className="empty">{a.noData}</div>}
               {byStore[0] && <div className="an-highlight"><span>{a.topLocation}</span><strong>{getStoreDisplayName(byStore[0][0], lang)}</strong></div>}
