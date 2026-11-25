@@ -628,7 +628,7 @@ h2 {
 .primary svg {
   width: 18px;
 }
- .metrics {
+.metrics {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
