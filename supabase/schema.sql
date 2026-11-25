@@ -3,6 +3,8 @@ create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   hourly_rate numeric not null default 150 check (hourly_rate >= 0),
   display_name text check (char_length(display_name) <= 80),
+  monthly_goal_type text check (monthly_goal_type in ('income', 'hours')),
+  monthly_goal_value numeric check (monthly_goal_value > 0),
   created_at timestamptz not null default now()
 );
 
