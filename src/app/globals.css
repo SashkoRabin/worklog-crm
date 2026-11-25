@@ -2882,3 +2882,46 @@ h2 {
   .salary-month-select select { max-width:87px; }
   .salary-debt-copy strong { font-size:27px; }
 }
+
+
+/* ConnectTeam integration in the profile */
+.connecteam-profile-card { grid-column:1/-1; }
+.connecteam-profile-content { display:grid; gap:18px; margin-top:20px; padding-top:19px; border-top:1px solid #ebe7f2; }
+.connecteam-profile-status { display:inline-flex; align-items:center; justify-content:center; width:27px; height:27px; border-radius:50%; color:#9b91aa; background:#f0edf5; font-size:12px; }
+.connecteam-profile-status.is-connected { color:#168762; background:#e5f7ef; }
+.connecteam-guide { padding:17px 18px; border:1px solid #e8e3f1; border-radius:14px; background:linear-gradient(135deg,rgba(128,104,244,.075),rgba(128,104,244,.018)); }
+.connecteam-guide-title { display:flex; align-items:center; gap:10px; color:#373044; font-size:12px; font-weight:800; }
+.connecteam-guide-title .an-icon { width:31px; height:31px; }
+.connecteam-guide ol { display:grid; gap:10px; margin:15px 0 0; padding:0; list-style:none; counter-reset:connecteam-step; }
+.connecteam-guide li { position:relative; display:flex; align-items:flex-start; gap:11px; color:#777185; font-size:11px; line-height:1.55; counter-increment:connecteam-step; }
+.connecteam-guide li:before { content:counter(connecteam-step); display:grid; place-items:center; width:21px; height:21px; flex:0 0 21px; border-radius:7px; color:#7059e8; background:#eeeaff; font-size:10px; font-weight:850; }
+.connecteam-profile-connected { display:flex; align-items:center; gap:12px; padding:14px 15px; border:1px solid #ccebdc; border-radius:13px; background:#f0faf5; }
+.connecteam-profile-check { display:grid; place-items:center; width:32px; height:32px; border-radius:10px; color:#168762; background:#dcf4e9; font-weight:900; }
+.connecteam-profile-connected>div { display:grid; gap:4px; min-width:0; }
+.connecteam-profile-connected strong { color:#236b51; font-size:12px; }
+.connecteam-profile-connected small { color:#6f8f80; font-size:10px; overflow-wrap:anywhere; }
+.connecteam-url-field input { width:100%; min-height:46px; }
+.connecteam-profile-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.connecteam-profile-actions .profile-save { width:auto; min-width:190px; margin:0; }
+.connecteam-profile-disconnect { min-height:42px; padding:0 15px; border:1px solid #ead5d8; border-radius:10px; color:#b45d69; background:#fff7f7; font-size:11px; font-weight:750; }
+.connecteam-profile-disconnect:disabled { opacity:.55; cursor:not-allowed; }
+.connecteam-profile-error { margin:0; color:#c45d68; font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
+.theme-dark .connecteam-profile-content { border-color:#40394d; }
+.theme-dark .connecteam-profile-status { color:#b4aabe; background:#393344; }
+.theme-dark .connecteam-profile-status.is-connected { color:#79d8b5; background:#203b34; }
+.theme-dark .connecteam-guide { border-color:#40394d; background:linear-gradient(135deg,rgba(128,104,244,.13),rgba(128,104,244,.035)); }
+.theme-dark .connecteam-guide-title { color:#eeeaf7; }
+.theme-dark .connecteam-guide li { color:#aaa2b9; }
+.theme-dark .connecteam-guide li:before { color:#b7a7ff; background:#39304f; }
+.theme-dark .connecteam-profile-connected { border-color:#315c4d; background:#20332e; }
+.theme-dark .connecteam-profile-connected strong { color:#9ce4c5; }
+.theme-dark .connecteam-profile-connected small { color:#a0b9ae; }
+.theme-dark .connecteam-profile-check { color:#79d8b5; background:#29483e; }
+.theme-dark .connecteam-profile-disconnect { border-color:#594047; color:#e7a0a8; background:#38272e; }
+@media(max-width:700px) {
+  .connecteam-profile-card { grid-column:auto; }
+  .connecteam-profile-content { gap:13px; margin-top:15px; padding-top:14px; }
+  .connecteam-guide { padding:14px 12px; }
+  .connecteam-profile-actions { display:grid; grid-template-columns:1fr; }
+  .connecteam-profile-actions .profile-save,.connecteam-profile-disconnect { width:100%; }
+}
