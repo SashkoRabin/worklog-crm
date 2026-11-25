@@ -65,7 +65,7 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs = 15000): Promise<T
     return await Promise.race([
       promise,
       new Promise<T>((_, reject) => {
-        timer = setTimeout(() => reject(new Error("Загрузка данных заняла слишком много времени. Проверьте соединение и попробуйте ещё раз.")), timeoutMs);
+        timer = setTimeout(() => reject(new Error(t.loading)), timeoutMs);
       }),
     ]);
   } finally {
@@ -191,7 +191,7 @@ export default function Home() {
       setDataState("loading");
       setDataError("");
       try {
-        if (!client) throw new Error("Не удалось подключиться к базе данных.");
+        if (!client) throw new Error(t.loadError);
         const { data, error: sessionError } = await withTimeout(client.auth.getSession());
         if (sessionError) throw sessionError;
         const sessionUser = data.session?.user;
@@ -222,7 +222,7 @@ export default function Home() {
       } catch (error) {
         console.error("Dashboard data loading failed", error);
         if (active) {
-          setDataError(error instanceof Error ? error.message : "Не удалось загрузить данные.");
+          setDataError(error instanceof Error ? error.message : t.loadError);
           setDataState("error");
         }
       }
@@ -432,7 +432,7 @@ export default function Home() {
       setEditing(null);
     } catch (error) {
       console.error("Unable to sync selected day from Connecteam", error);
-      setDaySyncError(error instanceof Error ? error.message : "Не удалось синхронизировать день.");
+      setDaySyncError(error instanceof Error ? error.message : lang === "ru" ? "Не удалось синхронизировать день." : lang === "cs" ? "Den se nepodařilo synchronizovat." : "Could not sync this day.");
     } finally {
       setIsDaySyncing(false);
     }
@@ -550,13 +550,13 @@ export default function Home() {
         {dataState === "loading" ? (
           <section className="card data-state-card" aria-live="polite">
             <span className="spinner" />
-            <strong>Загружаем аналитику…</strong>
+            <strong>{t.loadingAnalytics}</strong>
           </section>
         ) : dataState === "error" ? (
           <section className="card data-state-card data-state-error" role="alert">
-            <strong>Не удалось загрузить аналитику</strong>
+            <strong>{t.loadError}</strong>
             <p>{dataError}</p>
-            <button className="primary" onClick={() => setReloadKey((value) => value + 1)}>Повторить</button>
+            <button className="primary" onClick={() => setReloadKey((value) => value + 1)}>{t.retry}</button>
           </section>
         ) : <div className="metrics">
           <Metric
@@ -587,11 +587,11 @@ export default function Home() {
         <div className={`calendar-editor-layout ${isShiftEditorOpen ? "is-editing" : ""}`}>
         <section className="card calendar-card">
           {dataState === "loading" ? (
-            <div className="calendar-data-state" aria-live="polite"><span className="spinner" /><strong>Загружаем календарь…</strong></div>
+            <div className="calendar-data-state" aria-live="polite"><span className="spinner" /><strong>{t.loadingCalendar}</strong></div>
           ) : dataState === "error" ? (
             <div className="calendar-data-state data-state-error" role="alert">
-              <strong>Не удалось загрузить календарь</strong><p>{dataError}</p>
-              <button className="primary" onClick={() => setReloadKey((value) => value + 1)}>Повторить</button>
+              <strong>{t.loadError}</strong><p>{dataError}</p>
+              <button className="primary" onClick={() => setReloadKey((value) => value + 1)}>{t.retry}</button>
             </div>
           ) : <>
 
@@ -602,13 +602,13 @@ export default function Home() {
             </div>
             <div className="month-nav">
               <button
-                aria-label="Previous month"
+                aria-label={t.previousMonthLabel}
                 onClick={() => setMonth(subMonths(month, 1))}
               >
                 <ChevronLeft />
               </button>
               <button
-                aria-label="Next month"
+                aria-label={t.nextMonthLabel}
                 onClick={() => setMonth(addDays(endOfMonth(month), 1))}
               >
                 <ChevronRight />
@@ -728,7 +728,7 @@ export default function Home() {
                 </b>
                 <button
                   className="delete"
-                  aria-label="Delete shift"
+                  aria-label={t.delete}
                   onClick={() => group.shifts.forEach((item) => void deleteShift(item))}
                 >
                   <X size={16} />
@@ -761,7 +761,7 @@ export default function Home() {
             <span className="sheet-handle" />
             <div className="mobile-sheet-head">
               <h2>{t.settings}</h2>
-              <button type="button" className="close" onClick={() => setDialog(null)} aria-label="Close">
+              <button type="button" className="close" onClick={() => setDialog(null)} aria-label={t.close}>
                 <X />
               </button>
             </div>
@@ -822,7 +822,7 @@ export default function Home() {
               </label>
               <Link href="/telegram" className="connecteam-cta">
                 <span className="connecteam-cta-icon"><Send /></span>
-                <span><b>Telegram Assistant</b><small>Shift reminders</small></span>
+                <span><b>{t.telegramAssistant}</b><small>{t.shiftReminders}</small></span>
                 <span className="connecteam-cta-arrow" aria-hidden="true">→</span>
               </Link>
               <button type="button" className="connecteam-cta" onClick={() => setDialog("connecteam")}>
@@ -865,7 +865,7 @@ function ConnecteamDialog({
       .then(async (response) => {
         const data = await response.json();
         if (data.code === "SETUP_REQUIRED") throw new Error("CONNECTEAM_SETUP_REQUIRED");
-        if (!response.ok) throw new Error(data.error || "Unable to check Connecteam connection.");
+        if (!response.ok) throw new Error(data.error || lang === "ru" ? "Не удалось проверить подключение Connecteam." : lang === "cs" ? "Nepodařilo se ověřit připojení Connecteam." : "Unable to check Connecteam connection.");
         if (data.connected) {
           setConnected(true);
           setLastSynced(data.lastSyncedAt);
@@ -894,12 +894,12 @@ function ConnecteamDialog({
     setError("");
     try {
       const response = await fetch("/api/connecteam/sync", { method: "DELETE", credentials: "same-origin" });
-      if (!response.ok) throw new Error("Unable to disconnect Connecteam.");
+      if (!response.ok) throw new Error(lang === "ru" ? "Не удалось отключить Connecteam." : lang === "cs" ? "Nepodařilo se odpojit Connecteam." : "Unable to disconnect Connecteam.");
       setConnected(false);
       setLastSynced(null);
       await onSynced();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Unable to disconnect Connecteam.");
+      setError(reason instanceof Error ? reason.message : lang === "ru" ? "Не удалось отключить Connecteam." : lang === "cs" ? "Nepodařilo se odpojit Connecteam." : "Unable to disconnect Connecteam.");
     } finally {
       setPending(false);
     }
@@ -907,7 +907,7 @@ function ConnecteamDialog({
   return (
     <div className="overlay" onMouseDown={onClose}>
       <form className="dialog connecteam-dialog" onMouseDown={(event) => event.stopPropagation()} onSubmit={sync}>
-        <button type="button" className="close" onClick={onClose} aria-label="Close"><X /></button>
+        <button type="button" className="close" onClick={onClose} aria-label={t.close}><X /></button>
         <div className="dialog-body">
           <p className="eyebrow">{text.title}</p>
           <h2>{connected ? text.connected : text.title}</h2>
@@ -1011,7 +1011,7 @@ function ShiftCard({
             <p className="eyebrow">{fromConnecteam ? t.connecteam : editing ? t.saveShift : t.newShift}</p>
             <h2>{fromConnecteam ? editing?.store : editing ? editing?.store : t.add}</h2>
           </div>
-          <button type="button" className="close" onClick={onClose} aria-label="Close">
+          <button type="button" className="close" onClick={onClose} aria-label={t.close}>
           <X />
         </button>
         </div>
