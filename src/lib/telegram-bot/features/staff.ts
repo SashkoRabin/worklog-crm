@@ -87,7 +87,9 @@ function staffNav(index?: number, backTo: "loc" | "dates" = "loc") {
   return [{ text: "⬅️ Назад", callback_data: backTo === "loc" ? "staff:back:loc" : `staff:back:dates:${index}` }, { text: "🏠 В меню", callback_data: "staff:menu" }];
 }
 async function renderStaff(chat: number, messageId: number | undefined, text: string, keyboard: { text: string; callback_data: string }[][]) {
-  const localizedText = await localizeStaff(chat, text);\n  const localizedKeyboard = await Promise.all(keyboard.map(async row => Promise.all(row.map(async button => ({ ...button, text: await localizeStaff(chat, button.text) })))));\n  const payload = { chat_id: chat, text: localizedText, parse_mode: "HTML", reply_markup: { inline_keyboard: localizedKeyboard } };
+  const localizedText = await localizeStaff(chat, text);
+  const localizedKeyboard = await Promise.all(keyboard.map(async row => Promise.all(row.map(async button => ({ ...button, text: await localizeStaff(chat, button.text) })))));
+  const payload = { chat_id: chat, text: localizedText, parse_mode: "HTML", reply_markup: { inline_keyboard: localizedKeyboard } };
   if (messageId) {
     try {
       await telegramApi("editMessageText", { ...payload, message_id: messageId });
