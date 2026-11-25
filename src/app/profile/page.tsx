@@ -7,7 +7,7 @@ import { format, parseISO } from "date-fns";
 import { enUS, ru, cs } from "date-fns/locale";
 import { loadUserShifts } from "@/lib/connecteam-client";
 import type { Shift } from "@/lib/worklog";
-import { ArrowLeft, Moon, Sun, UserRound, Target, Globe2, Save, LoaderCircle, CalendarDays, BarChart3, Trash2, ChevronDown, WalletCards, CheckCircle2, Plus, CalendarClock, TrendingUp, CircleDollarSign } from "lucide-react";
+import { ArrowLeft, Moon, Sun, UserRound, Target, Globe2, Save, LoaderCircle, CalendarDays, BarChart3, Trash2, ChevronDown, WalletCards, Link2, RefreshCw, CheckCircle2, Plus, CalendarClock, TrendingUp, CircleDollarSign } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Lang, money } from "@/lib/worklog";
 import { MobileNav } from "@/components/mobile-nav";
@@ -20,7 +20,7 @@ type MonthSalary = { month: string; earned: number; received: number; unpaid: nu
 
 const text = {
   en: {
-    expand:"Expand section",collapse:"Collapse section",salary:"My salary",salaryDescription:"Track what you earned, what you received and what is still owed.",earnedSalary:"Earned",receivedSalary:"Received",unpaidSalary:"Still owed",recordPayment:"Record payment",paymentAmount:"Amount received",paymentDate:"Payment date",addPayment:"Add payment",receivedButton:"Received",settleHint:"Mark the outstanding balance as paid and add it to your received total.",noDebt:"Nothing outstanding. Your salary is up to date.",paymentHistory:"Monthly history",paymentLog:"Payment dates",noPaymentsMonth:"No payments recorded for this month.",noHistory:"No salary history yet.",month:"Month",paidOn:"Paid",totalOwed:"Total still owed",paymentSaved:"Payment recorded",paymentSettled:"Outstanding balance marked as received",paymentError:"Could not save payment. Apply the salary payments migration first.",paymentInvalid:"Enter an amount greater than zero.",
+    expand:"Expand section",collapse:"Collapse section",connecteam:"Connecteam calendar",connecteamHint:"Import planned shifts automatically from your personal calendar feed.",connecteamConnected:"Calendar connected",connecteamLink:"Personal Calendar Sync link",connecteamConnect:"Connect calendar",connecteamSync:"Sync calendar",connecteamDisconnect:"Disconnect",connecteamStepsTitle:"Where to find your link",connecteamStep1:"Open the Connecteam app and go to Schedule.",connecteamStep2:"Tap Settings in the top-right corner.",connecteamStep3:"Choose Calendar Sync.",connecteamStep4:"Copy the calendar link and paste it here.",connecteamLastSync:"Last synced",connecteamSyncing:"Syncing…",connecteamError:"Could not connect to Connecteam. Check the link and try again.",salary:"My salary",salaryDescription:"Track what you earned, what you received and what is still owed.",earnedSalary:"Earned",receivedSalary:"Received",unpaidSalary:"Still owed",recordPayment:"Record payment",paymentAmount:"Amount received",paymentDate:"Payment date",addPayment:"Add payment",receivedButton:"Received",settleHint:"Mark the outstanding balance as paid and add it to your received total.",noDebt:"Nothing outstanding. Your salary is up to date.",paymentHistory:"Monthly history",paymentLog:"Payment dates",noPaymentsMonth:"No payments recorded for this month.",noHistory:"No salary history yet.",month:"Month",paidOn:"Paid",totalOwed:"Total still owed",paymentSaved:"Payment recorded",paymentSettled:"Outstanding balance marked as received",paymentError:"Could not save payment. Apply the salary payments migration first.",paymentInvalid:"Enter an amount greater than zero.",
     eyebrow:"YOUR ACCOUNT",title:"Profile",description:"Manage your hourly rate and monthly target.",
     rate:"Hourly rate",rateHint:"Your default rate for new shifts. Existing shifts keep their saved rate.",
     saveRate:"Save rate",saving:"Saving…",saved:"Saved",rateError:"Could not save hourly rate. Please try again.",
@@ -36,7 +36,7 @@ const text = {
     fallback:"Your settings are ready. Existing profile values will appear after the profile record is available.",
   },
   ru: {
-    expand:"Развернуть раздел",collapse:"Свернуть раздел",salary:"Моя зарплата",salaryDescription:"Контролируй начисления, полученные деньги и оставшуюся задолженность.",earnedSalary:"Начислено",receivedSalary:"Получено",unpaidSalary:"Не выдано",recordPayment:"Записать выплату",paymentAmount:"Сколько получил",paymentDate:"Дата получки",addPayment:"Добавить выплату",receivedButton:"Получил",settleHint:"Подтверди получение остатка. Сумма добавится к полученным деньгам.",noDebt:"Задолженности нет. Зарплата выплачена полностью.",paymentHistory:"История по месяцам",paymentLog:"Даты выплат",noPaymentsMonth:"В этом месяце выплат пока не было.",noHistory:"Истории выплат пока нет.",month:"Месяц",paidOn:"Получено",totalOwed:"Всего должны",paymentSaved:"Выплата записана",paymentSettled:"Остаток отмечен как полученный",paymentError:"Не удалось сохранить выплату. Сначала примени миграцию зарплат.",paymentInvalid:"Введи сумму больше нуля.",
+    expand:"Развернуть раздел",collapse:"Свернуть раздел",connecteam:"Календарь ConnectTeam",connecteamHint:"Автоматически загружай запланированные смены из личной ссылки календаря.",connecteamConnected:"Календарь подключён",connecteamLink:"Личная ссылка Calendar Sync",connecteamConnect:"Подключить календарь",connecteamSync:"Синхронизировать",connecteamDisconnect:"Отключить",connecteamStepsTitle:"Где взять ссылку",connecteamStep1:"Открой приложение ConnectTeam и перейди в раздел «Расписание».",connecteamStep2:"Нажми «Настройки» в правом верхнем углу.",connecteamStep3:"Выбери «Calendar Sync».",connecteamStep4:"Скопируй ссылку календаря и вставь её сюда.",connecteamLastSync:"Последняя синхронизация",connecteamSyncing:"Синхронизация…",connecteamError:"Не удалось подключить ConnectTeam. Проверь ссылку и попробуй ещё раз.",salary:"Моя зарплата",salaryDescription:"Контролируй начисления, полученные деньги и оставшуюся задолженность.",earnedSalary:"Начислено",receivedSalary:"Получено",unpaidSalary:"Не выдано",recordPayment:"Записать выплату",paymentAmount:"Сколько получил",paymentDate:"Дата получки",addPayment:"Добавить выплату",receivedButton:"Получил",settleHint:"Подтверди получение остатка. Сумма добавится к полученным деньгам.",noDebt:"Задолженности нет. Зарплата выплачена полностью.",paymentHistory:"История по месяцам",paymentLog:"Даты выплат",noPaymentsMonth:"В этом месяце выплат пока не было.",noHistory:"Истории выплат пока нет.",month:"Месяц",paidOn:"Получено",totalOwed:"Всего должны",paymentSaved:"Выплата записана",paymentSettled:"Остаток отмечен как полученный",paymentError:"Не удалось сохранить выплату. Сначала примени миграцию зарплат.",paymentInvalid:"Введи сумму больше нуля.",
     eyebrow:"ТВОЙ АККАУНТ",title:"Профиль",description:"Управляй почасовой ставкой и целью на месяц.",
     rate:"Почасовая ставка",rateHint:"Ставка по умолчанию для новых смен. У существующих смен сохраняется прежняя ставка.",
     saveRate:"Сохранить ставку",saving:"Сохранение…",saved:"Сохранено",rateError:"Не удалось сохранить ставку. Попробуй ещё раз.",
@@ -52,7 +52,7 @@ const text = {
     fallback:"Настройки доступны. Сохранённые значения появятся, когда запись профиля станет доступна.",
   },
   cs: {
-    expand:"Rozbalit sekci",collapse:"Sbalit sekci",salary:"Moje výplata",salaryDescription:"Sledujte výdělek, přijaté peníze a zbývající dlužnou částku.",earnedSalary:"Vyděláno",receivedSalary:"Vyplaceno",unpaidSalary:"Zbývá vyplatit",recordPayment:"Zaznamenat výplatu",paymentAmount:"Přijatá částka",paymentDate:"Datum výplaty",addPayment:"Přidat výplatu",receivedButton:"Přijato",settleHint:"Potvrďte přijetí zbývající částky a přičtěte ji k vyplaceným penězům.",noDebt:"Žádný nedoplatek. Výplata je kompletní.",paymentHistory:"Měsíční historie",paymentLog:"Data výplat",noPaymentsMonth:"Tento měsíc zatím nebyly zaznamenány žádné výplaty.",noHistory:"Zatím žádná historie výplat.",month:"Měsíc",paidOn:"Vyplaceno",totalOwed:"Celkem dluženo",paymentSaved:"Výplata zaznamenána",paymentSettled:"Zbývající částka byla označena jako vyplacená",paymentError:"Výplatu se nepodařilo uložit. Nejprve použijte migraci výplat.",paymentInvalid:"Zadejte částku větší než nula.",
+    expand:"Rozbalit sekci",collapse:"Sbalit sekci",connecteam:"Kalendář ConnectTeam",connecteamHint:"Automaticky importujte naplánované směny pomocí osobního odkazu kalendáře.",connecteamConnected:"Kalendář je připojen",connecteamLink:"Osobní odkaz Calendar Sync",connecteamConnect:"Připojit kalendář",connecteamSync:"Synchronizovat",connecteamDisconnect:"Odpojit",connecteamStepsTitle:"Kde najít odkaz",connecteamStep1:"Otevřete aplikaci ConnectTeam a přejděte do sekce Schedule.",connecteamStep2:"Klepněte na Nastavení v pravém horním rohu.",connecteamStep3:"Vyberte Calendar Sync.",connecteamStep4:"Zkopírujte odkaz kalendáře a vložte jej sem.",connecteamLastSync:"Poslední synchronizace",connecteamSyncing:"Synchronizace…",connecteamError:"ConnectTeam se nepodařilo připojit. Zkontrolujte odkaz a zkuste to znovu.",salary:"Moje výplata",salaryDescription:"Sledujte výdělek, přijaté peníze a zbývající dlužnou částku.",earnedSalary:"Vyděláno",receivedSalary:"Vyplaceno",unpaidSalary:"Zbývá vyplatit",recordPayment:"Zaznamenat výplatu",paymentAmount:"Přijatá částka",paymentDate:"Datum výplaty",addPayment:"Přidat výplatu",receivedButton:"Přijato",settleHint:"Potvrďte přijetí zbývající částky a přičtěte ji k vyplaceným penězům.",noDebt:"Žádný nedoplatek. Výplata je kompletní.",paymentHistory:"Měsíční historie",paymentLog:"Data výplat",noPaymentsMonth:"Tento měsíc zatím nebyly zaznamenány žádné výplaty.",noHistory:"Zatím žádná historie výplat.",month:"Měsíc",paidOn:"Vyplaceno",totalOwed:"Celkem dluženo",paymentSaved:"Výplata zaznamenána",paymentSettled:"Zbývající částka byla označena jako vyplacená",paymentError:"Výplatu se nepodařilo uložit. Nejprve použijte migraci výplat.",paymentInvalid:"Zadejte částku větší než nula.",
     eyebrow:"VÁŠ ÚČET",title:"Profil",description:"Spravujte hodinovou sazbu a měsíční cíl.",
     rate:"Hodinová sazba",rateHint:"Výchozí sazba pro nové směny. Starší směny si zachovají uloženou sazbu.",
     saveRate:"Uložit sazbu",saving:"Ukládání…",saved:"Uloženo",rateError:"Hodinovou sazbu se nepodařilo uložit. Zkuste to znovu.",
@@ -93,6 +93,11 @@ export default function ProfilePage() {
   const [profileFallback,setProfileFallback]=useState(false);
   const [shifts,setShifts]=useState<Shift[]>([]);
   const [payments,setPayments]=useState<SalaryPayment[]>([]);
+  const [connecteamUrl,setConnecteamUrl]=useState("");
+  const [connecteamConnected,setConnecteamConnected]=useState(false);
+  const [connecteamLastSynced,setConnecteamLastSynced]=useState<string|null>(null);
+  const [connecteamPending,setConnecteamPending]=useState(false);
+  const [connecteamError,setConnecteamError]=useState("");
   const [expandedSections,setExpandedSections]=useState<string[]>([]);
   const toggleSection=(section:string)=>setExpandedSections(current=>current.includes(section)?current.filter(item=>item!==section):[...current,section]);
   const isExpanded=(section:string)=>expandedSections.includes(section);
@@ -152,6 +157,15 @@ export default function ProfilePage() {
     return()=>{active=false;};
   },[]);
 
+  useEffect(()=>{
+    if(!userId)return;
+    let active=true;
+    fetch("/api/connecteam/sync",{credentials:"same-origin"})
+      .then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.code==="SETUP_REQUIRED"?"SETUP_REQUIRED":data.error||"status");if(active){setConnecteamConnected(Boolean(data.connected));setConnecteamLastSynced(data.lastSyncedAt||null);}})
+      .catch(reason=>{if(active)setConnecteamError(reason instanceof Error&&reason.message==="SETUP_REQUIRED"?"SETUP_REQUIRED":t.connecteamError);});
+    return()=>{active=false;};
+  },[userId]);
+
   useEffect(()=>{localStorage.setItem("worklog-lang",lang);},[lang]);
   useEffect(()=>{
     localStorage.setItem("worklog-theme",theme);
@@ -197,6 +211,37 @@ export default function ProfilePage() {
       ?{label:t.estimateHours,value:numericRate>0?`${(numericGoal/numericRate).toFixed(1)} ${t.hours}`:"—"}
       :{label:t.estimateEarn,value:money(numericGoal*numericRate)};
   },[goalType,numericGoal,numericRate,t]);
+
+  async function refreshConnecteamShifts(){
+    if(!userId)return;
+    const rows=await loadUserShifts(userId);
+    setShifts(rows);
+  }
+
+  async function connecteamAction(){
+    setConnecteamPending(true);setConnecteamError("");
+    try{
+      const {syncConnecteamCalendar}=await import("@/lib/connecteam-client");
+      await syncConnecteamCalendar(connecteamConnected?undefined:connecteamUrl.trim());
+      setConnecteamConnected(true);setConnecteamLastSynced(new Date().toISOString());setConnecteamUrl("");
+      await refreshConnecteamShifts();
+    }catch(reason){
+      console.error("ConnectTeam calendar sync failed",reason);
+      setConnecteamError(reason instanceof Error&&reason.message==="CONNECTEAM_SETUP_REQUIRED"?"SETUP_REQUIRED":reason instanceof Error?reason.message:t.connecteamError);
+    }finally{setConnecteamPending(false);}
+  }
+
+  async function disconnectConnecteam(){
+    setConnecteamPending(true);setConnecteamError("");
+    try{
+      const response=await fetch("/api/connecteam/sync",{method:"DELETE",credentials:"same-origin"});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.error||t.connecteamError);
+      setConnecteamConnected(false);setConnecteamLastSynced(null);setConnecteamUrl("");
+      await refreshConnecteamShifts();
+    }catch(reason){setConnecteamError(reason instanceof Error?reason.message:t.connecteamError);}
+    finally{setConnecteamPending(false);}
+  }
 
   async function saveRate(){
     if(!userId||!supabase)return;
@@ -299,6 +344,15 @@ export default function ProfilePage() {
           <label className="profile-field">{t.rate}<div className="profile-input-with-unit"><input type="number" min="0" step="1" value={rate} onChange={e=>{setRate(e.target.value);setRateState("idle");}} required/><span>{t.currency} / h</span></div></label>
           <button type="button" className="primary profile-save" onClick={saveRate} disabled={rateState==="saving"}><Save size={16}/>{rateState==="saving"?t.saving:rateState==="saved"?t.saved:t.saveRate}</button>
           </>}
+        </section>
+        <section className="card profile-card connecteam-profile-card">
+          <button type="button" className="profile-card-heading section-heading-toggle" aria-expanded={isExpanded("connecteam")} onClick={()=>toggleSection("connecteam")}><span className="an-icon"><Link2/></span><div><h2>{t.connecteam}</h2><p>{connecteamConnected?t.connecteamConnected:t.connecteamHint}</p></div><span className={connecteamConnected?"connecteam-profile-status is-connected":"connecteam-profile-status"}>{connecteamConnected?"●":"○"}</span><ChevronDown className="section-chevron" size={18}/></button>
+          {isExpanded("connecteam")&&<div className="connecteam-profile-content">
+            <div className="connecteam-guide"><div className="connecteam-guide-title"><span className="an-icon"><CalendarDays size={17}/></span><strong>{t.connecteamStepsTitle}</strong></div><ol><li>{t.connecteamStep1}</li><li>{t.connecteamStep2}</li><li>{t.connecteamStep3}</li><li>{t.connecteamStep4}</li></ol></div>
+            {connecteamConnected?<div className="connecteam-profile-connected"><span className="connecteam-profile-check">✓</span><div><strong>{t.connecteamConnected}</strong><small>{connecteamLastSynced?t.connecteamLastSync+": "+new Date(connecteamLastSynced).toLocaleString(lang==="ru"?"ru-RU":lang==="cs"?"cs-CZ":"en-US"):t.connecteamConnected}</small></div></div>:<label className="profile-field connecteam-url-field">{t.connecteamLink}<input type="url" value={connecteamUrl} onChange={e=>setConnecteamUrl(e.target.value)} placeholder="https://…" autoComplete="url"/></label>}
+            {connecteamError&&<p className="connecteam-profile-error" role="alert">{connecteamError==="SETUP_REQUIRED"?"Connecteam server setup is incomplete. Check the deployment environment variables.":connecteamError}</p>}
+            <div className="connecteam-profile-actions"><button type="button" className="primary profile-save" onClick={connecteamAction} disabled={connecteamPending||(!connecteamConnected&&!connecteamUrl.trim())}>{connecteamPending?<><LoaderCircle className="spin" size={15}/>{t.connecteamSyncing}</>:<><RefreshCw size={15}/>{connecteamConnected?t.connecteamSync:t.connecteamConnect}</>}</button>{connecteamConnected&&<button type="button" className="connecteam-profile-disconnect" onClick={disconnectConnecteam} disabled={connecteamPending}>{t.connecteamDisconnect}</button>}</div>
+          </div>}
         </section>
         <section className="card profile-card profile-goal-card">
           <button type="button" className="profile-card-heading section-heading-toggle" aria-expanded={isExpanded("goal")} onClick={()=>toggleSection("goal")}><span className="an-icon"><Target/></span><div><h2>{t.goal}</h2><p>{t.goalHint}</p></div><ChevronDown className="section-chevron" size={18}/></button>
