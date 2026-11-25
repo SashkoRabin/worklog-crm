@@ -2303,3 +2303,7 @@ h2 {
   .an-store-content { grid-template-columns:1fr; }
   .an-donut { width:135px; }
 }
+
+
+.an-chart-summary b { display:block; margin-top:2px; color:#20b68a; font-size:14px; font-weight:750; letter-spacing:-.15px; }
+.theme-dark .an-chart-summary b { color:#63d4ad; }
