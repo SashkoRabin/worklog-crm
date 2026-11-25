@@ -27,7 +27,7 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs = 15000): Promise<T
     return await Promise.race([
       promise,
       new Promise<T>((_, reject) => {
-        timer = setTimeout(() => reject(new Error("Загрузка данных заняла слишком много времени. Проверьте соединение и попробуйте ещё раз.")), timeoutMs);
+        timer = setTimeout(() => reject(new Error(copy[lang].loading)), timeoutMs);
       }),
     ]);
   } finally {
@@ -142,7 +142,7 @@ export default function Analytics() {
       setDataState("loading");
       setDataError("");
       try {
-        if (!client) throw new Error("Не удалось подключиться к базе данных.");
+        if (!client) throw new Error(copy[lang].loadError);
         const { data, error: sessionError } = await withTimeout(client.auth.getSession());
         if (sessionError) throw sessionError;
         const sessionUser = data.session?.user;
@@ -161,7 +161,7 @@ export default function Analytics() {
       } catch (error) {
         console.error("Analytics data loading failed", error);
         if (active) {
-          setDataError(error instanceof Error ? error.message : "Не удалось загрузить данные.");
+          setDataError(error instanceof Error ? error.message : copy[lang].loadError);
           setDataState("error");
         }
       }
@@ -261,13 +261,13 @@ export default function Analytics() {
         </header>
         {dataState === "loading" ? (
           <section className="card data-state-card" aria-live="polite">
-            <span className="spinner" /><strong>Загружаем аналитику…</strong>
+            <span className="spinner" /><strong>{t.loadingAnalytics}</strong>
           </section>
         ) : dataState === "error" ? (
           <section className="card data-state-card data-state-error" role="alert">
-            <strong>Не удалось загрузить аналитику</strong>
+            <strong>{t.loadError}</strong>
             <p>{dataError}</p>
-            <button className="primary" onClick={() => setReloadKey((value) => value + 1)}>Повторить</button>
+            <button className="primary" onClick={() => setReloadKey((value) => value + 1)}>{t.retry}</button>
           </section>
         ) : <>
         <div className="insights">
@@ -403,7 +403,7 @@ export default function Analytics() {
             <span className="sheet-handle" />
             <div className="mobile-sheet-head">
               <h2>{t.settings}</h2>
-              <button type="button" className="close" onClick={() => setMobileMenu(false)} aria-label="Close">
+              <button type="button" className="close" onClick={() => setMobileMenu(false)} aria-label={t.close}>
                 ×
               </button>
             </div>
