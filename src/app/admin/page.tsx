@@ -44,6 +44,7 @@ export default function AdminPage() {
   const [notice, setNotice] = useState("");
   const [rateDraft, setRateDraft] = useState("");
   const [mobileNav, setMobileNav] = useState(false);
+  const [chartMetric, setChartMetric] = useState<"hours" | "payroll">("hours");
 
   const load = useCallback(async () => {
     setPending(true); setError("");
@@ -132,6 +133,7 @@ export default function AdminPage() {
               <article><span className="kpi-icon amber"><CalendarClock size={18}/></span><small>Shifts this month</small><strong>{data.summary.shifts}</strong><em>Imported from Connecteam</em></article>
               <article className="admin-kpi-pay"><span className="kpi-icon green"><Wallet size={18}/></span><small>Estimated payroll</small><strong>{money(data.summary.payroll)}</strong><em>Previous month {money(data.summary.previousPayroll)}</em></article>
             </section>
+            <TrendChart shifts={allShifts} month={month} metric={chartMetric} onMetricChange={setChartMetric} />
             <div className="admin-overview-grid"><section className="admin-card"><div className="admin-card-title"><div><h2>Team overview</h2><p>Employees ranked by scheduled hours</p></div><button onClick={()=>openSection("employees")}>View all <ArrowUpRight size={14}/></button></div><div className="admin-ranking">{[...activeEmployees].sort((a,b)=>b.current.hours-a.current.hours).slice(0,7).map((person,index)=><button key={person.id} onClick={()=>{setSelectedId(person.id);setSection("employees");}}><span className="admin-rank">{String(index+1).padStart(2,"0")}</span><span className="admin-rank-name"><b>{person.name}</b><small>{person.current.shifts} shifts</small></span><span className="admin-rank-hours"><b>{number(person.current.hours)} h</b><small>{money(person.current.earnings)}</small></span><span className="admin-progress"><i style={{width:`${Math.min(100,data.summary.hours?person.current.hours/data.summary.hours*100:0)}%`}}/></span></button>)}</div></section>
               <section className="admin-card admin-insight-card"><div className="admin-card-title"><div><h2>Payroll snapshot</h2><p>Estimated wages by current rates</p></div><Wallet size={18}/></div><strong>{money(data.summary.payroll)}</strong><span>Current period estimate</span><div className="admin-insight-divider"/><div><small>Previous period</small><b>{money(data.summary.previousPayroll)}</b></div><button onClick={()=>openSection("payroll")}>Open payroll <ArrowUpRight size={14}/></button></section></div>
             <section className="admin-card"><div className="admin-card-title"><div><h2>Recent shifts</h2><p>Latest scheduled shifts in selected month</p></div><button onClick={()=>openSection("shifts")}>All shifts <ArrowUpRight size={14}/></button></div><ShiftTable shifts={allShifts.slice(-8).reverse()}/></section>
@@ -144,6 +146,61 @@ export default function AdminPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+
+function TrendChart({ shifts, month, metric, onMetricChange }: {
+  shifts: (Shift & { employee?: string })[];
+  month: string;
+  metric: "hours" | "payroll";
+  onMetricChange: (value: "hours" | "payroll") => void;
+}) {
+  const daysInMonth = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
+  const totals = Array.from({ length: daysInMonth }, (_, index) => {
+    const date = month + "-" + String(index + 1).padStart(2, "0");
+    const dayShifts = shifts.filter((shift) => shift.date === date);
+    return { day: index + 1, value: metric === "hours"
+      ? dayShifts.reduce((sum, shift) => sum + shift.hours, 0)
+      : dayShifts.reduce((sum, shift) => sum + (shift.earnings ?? 0), 0), count: dayShifts.length };
+  });
+  const max = Math.max(1, ...totals.map((item) => item.value));
+  const points = totals.map((item, index) => ({
+    x: 30 + (index / Math.max(1, totals.length - 1)) * 640,
+    y: 160 - (item.value / max) * 126,
+  }));
+  const line = points.map((point) => point.x + "," + point.y).join(" ");
+  const area = "30,160 " + line + " 670,160";
+  const total = totals.reduce((sum, item) => sum + item.value, 0);
+  const average = total / daysInMonth;
+  const formatValue = (value: number) => metric === "hours" ? number(value) + " h" : money(value);
+  return (
+    <section className="admin-card admin-chart-card">
+      <div className="admin-card-title admin-chart-heading">
+        <div><h2>Workload trend</h2><p>Daily team activity · {monthLabel(month)}</p></div>
+        <div className="admin-chart-switch">
+          <button className={metric === "hours" ? "active" : ""} onClick={() => onMetricChange("hours")}>Hours</button>
+          <button className={metric === "payroll" ? "active" : ""} onClick={() => onMetricChange("payroll")}>Payroll</button>
+        </div>
+      </div>
+      <div className="admin-chart-summary">
+        <div><small>{metric === "hours" ? "Total scheduled hours" : "Estimated payroll"}</small><strong>{formatValue(total)}</strong></div>
+        <span>Daily average <b>{formatValue(average)}</b></span>
+      </div>
+      {shifts.length ? <div className="admin-chart-plot">
+        <svg viewBox="0 0 700 190" role="img" aria-label={metric === "hours" ? "Daily scheduled hours chart" : "Daily estimated payroll chart"} preserveAspectRatio="none">
+          {[34, 76, 118, 160].map((y) => <line key={y} x1="30" x2="670" y1={y} y2={y} className="admin-chart-gridline" />)}
+          <polygon points={area} className="admin-chart-area" />
+          <polyline points={line} className="admin-chart-line" />
+          {points.map((point, index) => totals[index].value > 0 ? <circle key={index} cx={point.x} cy={point.y} r="3.5" className="admin-chart-point"><title>{totals[index].day + ": " + formatValue(totals[index].value) + " · " + totals[index].count + " shifts"}</title></circle> : null)}
+          <text x="30" y="184" className="admin-chart-axis">1</text>
+          <text x="240" y="184" className="admin-chart-axis">{Math.max(1, Math.round(daysInMonth / 3))}</text>
+          <text x="455" y="184" className="admin-chart-axis">{Math.max(1, Math.round(daysInMonth * 2 / 3))}</text>
+          <text x="670" y="184" textAnchor="end" className="admin-chart-axis">{daysInMonth}</text>
+        </svg>
+      </div> : <div className="admin-chart-empty">No shift data for this month yet.</div>}
+      <div className="admin-chart-foot"><span><i/> {metric === "hours" ? "Scheduled hours" : "Estimated wages"}</span><span>Hover points for daily details</span></div>
+    </section>
   );
 }
 
