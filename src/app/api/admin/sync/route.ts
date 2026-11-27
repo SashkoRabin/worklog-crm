@@ -81,7 +81,7 @@ async function getAllUsers() {
 
 async function getAllShifts(schedulerId: string | number, startTime: number, endTime: number) {
   const shifts: ConnecteamShift[] = [];
-  for (let offset = 0; offset < 100_000; offset += PAGE_SIZE) {
+  for (let offset = 0; offset < 100_000;) {
     const params = new URLSearchParams({
       startTime: String(startTime), endTime: String(endTime),
       limit: String(PAGE_SIZE), offset: String(offset),
