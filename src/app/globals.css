@@ -3176,3 +3176,16 @@ h2 {
 .admin-directory>button>.admin-directory-rank{flex:0 0 19px}
 .admin-directory>button>strong{flex:0 0 auto}
 @media(max-width:700px){.admin-directory>button>.admin-avatar{width:36px!important;min-width:36px!important;max-width:36px!important;height:36px!important;min-height:36px!important;max-height:36px!important;flex-basis:36px!important}}
+
+/* Zero-hours team members are visually de-emphasized */
+.admin-directory>button.no-hours,
+.admin-directory>button.no-hours.selected{background:rgba(130,133,148,.075);border-color:transparent;box-shadow:none}
+.admin-directory>button.no-hours .admin-avatar{background:linear-gradient(135deg,#858895,#626572)!important;color:#f3f4f6;filter:saturate(.35)}
+.admin-directory>button.no-hours .admin-directory-person>b,
+.admin-directory>button.no-hours>strong{color:#9295a3}
+.admin-directory>button.no-hours .admin-directory-person>small,
+.admin-directory>button.no-hours .admin-directory-rank{color:#777b8b}
+.admin-directory>button.no-hours .admin-directory-person>i{background:rgba(130,133,148,.12)}
+.admin-directory>button.no-hours .admin-directory-person>i>span{background:#777b8b!important;width:0!important}
+.admin-favorite-location{color:var(--admin-muted);font-weight:600}
+.admin-directory>button.no-hours .admin-favorite-location{color:#777b8b}
