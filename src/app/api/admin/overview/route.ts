@@ -58,9 +58,9 @@ export async function GET(request: Request) {
 
     const rates = new Map((ratesResult.data || []).map((item) => [item.connecteam_user_id, Number(item.hourly_rate)]));
     const rateHistory = rateHistoryResult.data || [];
-    const rateForDate = (employeeId: string, date: string) => {
+    const rateForDate = (employeeId: string, date: string): number | null => {
       const effective = rateHistory.find((item) => item.connecteam_user_id === employeeId && item.effective_from <= date);
-      return effective ? Number(effective.hourly_rate) : 0;
+      return effective ? Number(effective.hourly_rate) : null;
     };
     const employees = (staffResult.data || []).map((person) => {
       const assigned = (shiftsResult.data || []).filter((shift) => (shift.user_ids || []).includes(person.connecteam_user_id));
@@ -73,7 +73,10 @@ export async function GET(request: Request) {
           start: shift.start_time,
           end: shift.end_time,
           hours: Math.round(hours * 100) / 100,
-          earnings: Math.round(hours * rateForDate(person.connecteam_user_id, shift.work_date) * 100) / 100,
+          earnings: (() => {
+            const rate = rateForDate(person.connecteam_user_id, shift.work_date);
+            return rate === null ? null : Math.round(hours * rate * 100) / 100;
+          })(),
         };
       };
       const currentShifts = assigned.filter((shift) => shift.work_date >= bounds.start && shift.work_date < bounds.end).map(decorate);
@@ -81,14 +84,16 @@ export async function GET(request: Request) {
       const sum = (items: ReturnType<typeof decorate>[]) => ({
         shifts: items.length,
         hours: Math.round(items.reduce((total, item) => total + item.hours, 0) * 100) / 100,
-        earnings: Math.round(items.reduce((total, item) => total + item.earnings, 0) * 100) / 100,
+        earnings: items.some((item) => item.earnings === null)
+          ? null
+          : Math.round(items.reduce((total, item) => total + (item.earnings ?? 0), 0) * 100) / 100,
       });
       return {
         id: person.connecteam_user_id,
         name: [person.first_name, person.last_name].filter(Boolean).join(" ").trim() || "Unnamed employee",
         archived: person.is_archived,
         syncedAt: person.synced_at,
-        hourlyRate: rates.get(person.connecteam_user_id) || 0,
+        hourlyRate: rates.has(person.connecteam_user_id) ? rates.get(person.connecteam_user_id)! : null,
         current: sum(currentShifts),
         previous: sum(previousShifts),
         currentShifts,
@@ -104,8 +109,12 @@ export async function GET(request: Request) {
         employees: active.length,
         shifts: active.reduce((n, person) => n + person.current.shifts, 0),
         hours: Math.round(active.reduce((n, person) => n + person.current.hours, 0) * 100) / 100,
-        payroll: Math.round(active.reduce((n, person) => n + person.current.earnings, 0) * 100) / 100,
-        previousPayroll: Math.round(active.reduce((n, person) => n + person.previous.earnings, 0) * 100) / 100,
+        payroll: active.some((person) => person.current.earnings === null)
+          ? null
+          : Math.round(active.reduce((n, person) => n + (person.current.earnings ?? 0), 0) * 100) / 100,
+        previousPayroll: active.some((person) => person.previous.earnings === null)
+          ? null
+          : Math.round(active.reduce((n, person) => n + (person.previous.earnings ?? 0), 0) * 100) / 100,
       },
       source: "ConnectTeam scheduled shifts",
       generatedAt: new Date().toISOString(),
