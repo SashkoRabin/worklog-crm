@@ -87,6 +87,7 @@ export default function AdminPage() {
 
   async function saveRate() {
     if (!selected) return;
+    if (!rateDraft.trim()) { setError("Enter an hourly rate before saving."); return; }
     const value = Number(rateDraft);
     if (!Number.isFinite(value) || value < 0 || value > 100000) { setError("Enter a valid hourly rate."); return; }
     setSavingRate(true); setError(""); setNotice("");
