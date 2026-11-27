@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/telegram-server";
+import { createAdminClient, getAuthenticatedUser } from "@/lib/telegram-server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -112,8 +112,12 @@ function extractShifts(payload: unknown): ConnecteamShift[] {
 
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const isCronRequest = Boolean(secret) && request.headers.get("authorization") === `Bearer ${secret}`;
+  if (!isCronRequest) {
+    const user = request.method === "POST" ? await getAuthenticatedUser() : null;
+    if ((user?.email || "").trim().toLowerCase() !== "admin@gmail.com") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
   }
   try {
     credentials();
@@ -196,4 +200,9 @@ export async function GET(request: Request) {
     console.error("Connecteam staff sync failed", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : "Connecteam sync failed." }, { status: 500 });
   }
+}
+
+
+export async function POST(request: Request) {
+  return GET(request);
 }
