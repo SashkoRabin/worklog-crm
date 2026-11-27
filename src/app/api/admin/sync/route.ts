@@ -29,6 +29,12 @@ type ConnecteamShift = {
 };
 type ApiEnvelope<T> = { data?: T; paging?: { offset?: number } };
 
+function nextOffset(result: ApiEnvelope<unknown>, current: number, count: number) {
+  const next = result.paging?.offset;
+  if (typeof next === "number" && next > current) return next;
+  return current + count;
+}
+
 async function requireAdmin() {
   const user = await getAuthenticatedUser();
   if (!user) return { response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
@@ -67,6 +73,9 @@ async function getAllUsers() {
     const batch = result.data?.users || [];
     users.push(...batch);
     if (batch.length < PAGE_SIZE) break;
+    const next = nextOffset(result, offset, batch.length);
+    if (next <= offset) throw new Error("Connecteam users pagination did not advance.");
+    offset = next - PAGE_SIZE;
   }
   return users;
 }
@@ -84,6 +93,9 @@ async function getAllShifts(schedulerId: string | number, startTime: number, end
     const batch = result.data?.shifts || [];
     shifts.push(...batch);
     if (batch.length < PAGE_SIZE) break;
+    const next = nextOffset(result, offset, batch.length);
+    if (next <= offset) throw new Error("Connecteam shifts pagination did not advance.");
+    offset = next - PAGE_SIZE;
   }
   return shifts;
 }
