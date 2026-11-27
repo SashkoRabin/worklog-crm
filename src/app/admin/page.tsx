@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import { LayoutDashboard, Users, CalendarClock, Wallet, Settings, RefreshCw, Search, ChevronLeft, ChevronRight, LogOut, Menu, X, Clock3, UserRound, ArrowUpRight } from "lucide-react";
 
 type Shift = { id: string; date: string; location: string; start: string; end: string; hours: number; earnings: number };
@@ -107,7 +108,7 @@ export default function AdminPage() {
         <div className="admin-brand"><span className="admin-brand-mark">YK</span><span><b>WorkLog</b><small>ADMINISTRATION</small></span><button className="admin-mobile-close" onClick={() => setMobileNav(false)} aria-label="Close menu"><X size={18}/></button></div>
         <div className="admin-nav-label">WORKSPACE</div>
         <nav className="admin-nav">{sections.map(item => { const Icon=item.icon; return <button key={item.id} className={section===item.id?"active":""} onClick={()=>openSection(item.id)}><Icon size={17}/><span>{item.label}</span>{section===item.id&&<i/>}</button>; })}</nav>
-        <div className="admin-sidebar-bottom"><div className="admin-user-chip"><span className="admin-user-avatar">A</span><span><b>Administrator</b><small>admin@gmail.com</small></span></div><button className="admin-exit" onClick={()=>router.push("/")}><LogOut size={16}/> Back to employee app</button></div>
+        <div className="admin-sidebar-bottom"><div className="admin-user-chip"><span className="admin-user-avatar">A</span><span><b>Administrator</b><small>admin@gmail.com</small></span></div><button className="admin-exit" onClick={async()=>{await supabase?.auth.signOut();router.replace("/");}}><LogOut size={16}/> Sign out</button></div>
       </aside>
       {mobileNav && <button className="admin-mobile-overlay" onClick={()=>setMobileNav(false)} aria-label="Close navigation"/>}
       <main className="admin-main">
