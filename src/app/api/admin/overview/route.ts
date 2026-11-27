@@ -40,6 +40,17 @@ export async function GET(request: Request) {
       db.from("connecteam_staff_pay_rates").select("connecteam_user_id,hourly_rate,updated_at"),
       db.from("connecteam_staff_pay_rate_history").select("connecteam_user_id,hourly_rate,effective_from").order("effective_from", { ascending: false }),
     ]);
+    const queryErrors = [staffResult.error, shiftsResult.error, ratesResult.error, rateHistoryResult.error].filter(Boolean);
+    const missingSchema = queryErrors.find((error) =>
+      error && ["PGRST205", "42P01", "42703"].includes(String((error as { code?: string }).code || "")),
+    );
+    if (missingSchema) {
+      console.error("Admin database schema is not installed:", missingSchema);
+      return NextResponse.json({
+        error: "Admin database is not initialized. In Supabase SQL Editor run supabase/connecteam-staff-migration.sql first, then supabase/worklog-admin-migration.sql. After both scripts finish, reload this page.",
+        code: "ADMIN_SCHEMA_NOT_READY",
+      }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    }
     if (staffResult.error) throw staffResult.error;
     if (shiftsResult.error) throw shiftsResult.error;
     if (ratesResult.error) throw ratesResult.error;
