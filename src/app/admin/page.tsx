@@ -49,8 +49,15 @@ export default function AdminPage() {
     setPending(true); setError("");
     try {
       const response = await fetch("/api/admin/overview?month=" + encodeURIComponent(month), { cache: "no-store", credentials: "same-origin" });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Unable to load admin data.");
+      const raw = await response.text();
+      let body: { error?: string; code?: string };
+      try { body = raw ? JSON.parse(raw) as { error?: string; code?: string } : {}; }
+      catch { throw new Error(response.redirected ? "Your session has expired. Sign in again and reopen the admin panel." : `Admin server returned an invalid response (HTTP ${response.status}).`); }
+      if (!response.ok) {
+        if (response.status === 401) throw new Error("Your session has expired. Sign in again and reopen the admin panel.");
+        if (response.status === 403) throw new Error("This account does not have administrator access. Sign in with admin@gmail.com.");
+        throw new Error(body.error || `Unable to load admin data (HTTP ${response.status}).`);
+      }
       setData(body);
       setSelectedId((current) => body.employees.some((item: Employee) => item.id === current) ? current : "");
     } catch (reason) {
