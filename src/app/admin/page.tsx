@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, Clock3, DollarSign, RefreshCw, Search, Users, Wallet, X } from "lucide-react";
+import { ArrowLeft, CalendarDays, Clock3, RefreshCw, Search, Users, Wallet, X } from "lucide-react";
 
 type Shift = { id: string; date: string; location: string; start: string; end: string; hours: number; earnings: number };
 type Employee = {
