@@ -76,7 +76,7 @@ export default function AdminPage() {
   async function sync() {
     setSyncing(true); setError(""); setNotice("");
     try {
-      const response = await fetch("/api/connecteam/staff-sync", { method: "POST", credentials: "same-origin", cache: "no-store" });
+      const response = await fetch("/api/connecteam/staff-sync?month=" + encodeURIComponent(month), { method: "POST", credentials: "same-origin", cache: "no-store" });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Connecteam sync failed.");
       setNotice(`Synchronization complete: ${body.users} employees, ${body.shifts} shifts.`);
