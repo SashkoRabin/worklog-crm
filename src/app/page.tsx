@@ -204,6 +204,10 @@ export default function Home() {
           return;
         }
         if (active) setUser(sessionUser);
+        if ((sessionUser.email || "").trim().toLowerCase() === "admin@gmail.com") {
+          window.location.replace("/admin");
+          return;
+        }
         const [profileResult, rows] = await withTimeout(Promise.all([
           client.from("profiles").select("hourly_rate,display_name").eq("id", sessionUser.id).single(),
           loadUserShifts(sessionUser.id),
