@@ -29,7 +29,7 @@ export default function AdminPage() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [rateDraft, setRateDraft] = useState("");
-  const [savingRate, setSavingRate] = useState(false);
+  const [savingRate, setSavingRate] = useState(false);\n  const [syncing, setSyncing] = useState(false);\n  const [syncMessage, setSyncMessage] = useState("");
 
   const load = useCallback(async () => {
     setPending(true); setError("");
@@ -67,7 +67,7 @@ export default function AdminPage() {
     finally { setSavingRate(false); }
   }
 
-  const changeMonth = (delta: number) => {
+  async function syncConnecteam() {\n    setSyncing(true); setError(""); setSyncMessage("");\n    try {\n      const response = await fetch("/api/admin/sync", { method: "POST", credentials: "same-origin", cache: "no-store" });\n      const body = await response.json();\n      if (!response.ok) throw new Error(body.error || "Connecteam sync failed.");\n      setSyncMessage(`Synced ${body.employeesSynced} employees and ${body.shiftsSynced} shifts.\\u00a0`);\n      await load();\n    } catch (reason) { setError(reason instanceof Error ? reason.message : "Connecteam sync failed."); }\n    finally { setSyncing(false); }\n  }\n\n  const changeMonth = (delta: number) => {
     const date = new Date(month + "-01T12:00:00");
     date.setMonth(date.getMonth() + delta);
     setMonth(date.toISOString().slice(0, 7));
@@ -78,7 +78,7 @@ export default function AdminPage() {
       <header className="admin-header">
         <Link href="/" className="admin-back"><ArrowLeft size={17}/> WorkLog</Link>
         <div className="admin-heading"><span className="admin-eyebrow">WORKLOG MANAGEMENT</span><h1>Admin dashboard</h1><p>Employee shifts and estimated payroll from ConnectTeam</p></div>
-        <button className="admin-refresh" onClick={() => void load()} disabled={pending}><RefreshCw size={16} className={pending ? "admin-spin" : ""}/> Refresh</button>
+        <div className="admin-header-actions"><button className="admin-refresh" onClick={() => void load()} disabled={pending || syncing}><RefreshCw size={16} className={pending ? "admin-spin" : ""}/> Refresh</button><button className="admin-refresh" onClick={() => void syncConnecteam()} disabled={syncing || pending}><RefreshCw size={16} className={syncing ? "admin-spin" : ""}/> {syncing ? "Syncing…" : "Sync Connecteam"}</button></div>
       </header>
 
       <section className="admin-toolbar">
@@ -86,7 +86,7 @@ export default function AdminPage() {
         <label className="admin-month-input"><CalendarDays size={15}/><input type="month" value={month} onChange={(event) => setMonth(event.target.value)}/></label>
       </section>
 
-      {error && <div className="admin-error" role="alert"><span>{error}</span><button onClick={() => void load()}>Retry</button></div>}
+      {syncMessage && <div className="admin-sync-success" role="status">{syncMessage}</div>}\n      {error && <div className="admin-error" role="alert"><span>{error}</span><button onClick={() => void load()}>Retry</button></div>}
 
       {data && <>
         <section className="admin-metrics">
