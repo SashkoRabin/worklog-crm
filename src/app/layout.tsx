@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TelegramWebApp } from "@/components/telegram-web-app";
+import { ChristmasDecor } from "@/components/christmas-decor";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <TelegramWebApp />
+        <ChristmasDecor />
         {children}
       </body>
     </html>
