@@ -171,15 +171,28 @@ export async function POST() {
       if (result.error) throw result.error;
     }
 
-    // Replace only the requested date window after all upstream requests have succeeded.
-    const deleted = await db.from("connecteam_staff_shifts")
-      .delete().gte("work_date", window.startDate).lt("work_date", window.endDate);
-    if (deleted.error) throw deleted.error;
-
+    // Upsert the fresh snapshot first. Only after every batch succeeds do we remove
+    // rows that disappeared from Connecteam, so a failed import cannot wipe good data.
     for (let offset = 0; offset < shiftRows.length; offset += 500) {
       const batch = shiftRows.slice(offset, offset + 500);
       const inserted = await db.from("connecteam_staff_shifts").upsert(batch, { onConflict: "connecteam_shift_id" });
       if (inserted.error) throw inserted.error;
+    }
+
+    const existing = await db.from("connecteam_staff_shifts")
+      .select("connecteam_shift_id")
+      .gte("work_date", window.startDate)
+      .lt("work_date", window.endDate);
+    if (existing.error) throw existing.error;
+    const freshIds = new Set(shiftRows.map((shift) => shift.connecteam_shift_id));
+    const staleIds = (existing.data || [])
+      .map((row) => row.connecteam_shift_id)
+      .filter((id) => !freshIds.has(id));
+    for (let offset = 0; offset < staleIds.length; offset += 100) {
+      const batch = staleIds.slice(offset, offset + 100);
+      const removed = await db.from("connecteam_staff_shifts")
+        .delete().in("connecteam_shift_id", batch);
+      if (removed.error) throw removed.error;
     }
 
     return NextResponse.json({
