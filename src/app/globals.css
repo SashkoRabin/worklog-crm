@@ -3136,3 +3136,29 @@ h2 {
 .admin-shift-detail-row td:first-child{padding-left:42px!important}
 .admin-shift-detail-row:hover td{background:rgba(128,105,231,.035)!important}
 @media(max-width:700px){.admin-shift-day-toggle{gap:7px;padding:11px 6px}.admin-shift-day-toggle strong{min-width:75px}.admin-shift-detail-row td:first-child{padding-left:24px!important}}
+
+/* Team directory: ranked by hours with a clearer, balanced profile layout */
+.admin-employee-layout{grid-template-columns:minmax(320px,.9fr) minmax(0,1.35fr);gap:16px;align-items:stretch}
+.admin-directory{gap:7px;max-height:680px;padding:2px 5px 2px 2px;scrollbar-width:thin}
+.admin-directory>button{min-height:62px;gap:10px;padding:9px 11px;background:var(--admin-soft,rgba(128,105,231,.055));border:1px solid transparent;transition:border-color .16s ease,background .16s ease,transform .16s ease}
+.admin-directory>button:hover{border-color:rgba(128,105,231,.35);transform:translateY(-1px)}
+.admin-directory>button.selected{background:rgba(128,105,231,.13);border-color:#8069e7;box-shadow:0 3px 12px rgba(80,60,160,.08)}
+.admin-directory-rank{width:19px;flex:0 0 19px;color:var(--admin-muted);font-size:9px;font-weight:750;font-variant-numeric:tabular-nums}
+.admin-directory-person{display:grid;gap:4px;flex:1;min-width:0}
+.admin-directory-person>i{display:block;height:3px;overflow:hidden;border-radius:9px;background:rgba(128,105,231,.12)}
+.admin-directory-person>i>span{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,#9a88f1,#6c55d4)}
+.admin-directory>button>strong{min-width:55px;text-align:right;color:var(--admin-text);font-size:11px;font-variant-numeric:tabular-nums}
+.admin-directory>button>strong small{font-size:8px;color:var(--admin-muted);font-weight:600}
+.admin-employee-detail{padding:20px;background:var(--admin-card);box-shadow:0 5px 22px rgba(20,18,40,.04)}
+.admin-profile-metrics>div{border:1px solid var(--admin-line);background:rgba(128,105,231,.055)}
+.admin-profile-metrics b{font-size:14px;font-variant-numeric:tabular-nums}
+.admin-rate-input{max-width:320px;font-size:10px;font-weight:650}
+.admin-rate-input input{height:42px;padding:0 12px;border-radius:10px}
+.admin-employee-detail>.admin-primary-action{min-height:40px;padding:0 17px;border-radius:10px}
+[data-theme="dark"] .admin-directory>button{background:#222230}
+[data-theme="dark"] .admin-directory>button.selected{background:rgba(128,105,231,.2);border-color:#8069e7}
+[data-theme="dark"] .admin-employee-detail{background:#1b1b28}
+[data-theme="dark"] .admin-profile-metrics>div{background:#242433}
+[data-theme="dark"] .admin-rate-input input{background:#242433;border-color:#3a394b}
+@media(max-width:900px){.admin-employee-layout{grid-template-columns:minmax(260px,.8fr) minmax(0,1.2fr)}}
+@media(max-width:700px){.admin-employee-layout{grid-template-columns:1fr}.admin-directory{max-height:360px}.admin-employee-detail{padding:14px}}
