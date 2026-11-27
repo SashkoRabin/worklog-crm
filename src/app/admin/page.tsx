@@ -50,8 +50,8 @@ export default function AdminPage() {
     try {
       const response = await fetch("/api/admin/overview?month=" + encodeURIComponent(month), { cache: "no-store", credentials: "same-origin" });
       const raw = await response.text();
-      let body: { error?: string; code?: string };
-      try { body = raw ? JSON.parse(raw) as { error?: string; code?: string } : {}; }
+      let body: Overview & { error?: string; code?: string };
+      try { body = raw ? JSON.parse(raw) as Overview & { error?: string; code?: string } : {} as Overview & { error?: string; code?: string }; }
       catch { throw new Error(response.redirected ? "Your session has expired. Sign in again and reopen the admin panel." : `Admin server returned an invalid response (HTTP ${response.status}).`); }
       if (!response.ok) {
         if (response.status === 401) throw new Error("Your session has expired. Sign in again and reopen the admin panel.");
