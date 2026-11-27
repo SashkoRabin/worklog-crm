@@ -56,8 +56,58 @@ export async function GET(request: Request) {
     if (ratesResult.error) throw ratesResult.error;
     if (rateHistoryResult.error) throw rateHistoryResult.error;
 
-    const rates = new Map((ratesResult.data || []).map((item) => [item.connecteam_user_id, Number(item.hourly_rate)]));
-    const rateHistory = rateHistoryResult.data || [];
+    // Ensure every employee has a persisted rate. New employees start at 150 CZK/hour.
+    // The default is effective from the first day of the current month; existing custom
+    // rates without history are only seeded from today to avoid rewriting past payroll.
+    const currentRates = ratesResult.data || [];
+    const knownRateIds = new Set(currentRates.map((item) => item.connecteam_user_id));
+    const missingRateUsers = (staffResult.data || [])
+      .filter((person) => !knownRateIds.has(person.connecteam_user_id))
+      .map((person) => ({
+        connecteam_user_id: person.connecteam_user_id,
+        hourly_rate: 150,
+      }));
+    if (missingRateUsers.length) {
+      const { error } = await db.from("connecteam_staff_pay_rates").upsert(missingRateUsers, {
+        onConflict: "connecteam_user_id",
+        ignoreDuplicates: true,
+      });
+      if (error) throw error;
+    }
+
+    const ratesAfterDefaults = missingRateUsers.length
+      ? await db.from("connecteam_staff_pay_rates").select("connecteam_user_id,hourly_rate,updated_at")
+      : { data: currentRates, error: null };
+    if (ratesAfterDefaults.error) throw ratesAfterDefaults.error;
+    const effectiveToday = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Prague", year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(new Date());
+    const currentMonthStart = effectiveToday.slice(0, 7) + "-01";
+    const historyRows = rateHistoryResult.data || [];
+    const historyRateIds = new Set(historyRows.map((item) => item.connecteam_user_id));
+    const missingHistory = (ratesAfterDefaults.data || [])
+      .filter((item) => !historyRateIds.has(item.connecteam_user_id))
+      .map((item) => ({
+        connecteam_user_id: item.connecteam_user_id,
+        hourly_rate: Number(item.hourly_rate),
+        effective_from: knownRateIds.has(item.connecteam_user_id) ? effectiveToday : currentMonthStart,
+      }));
+    if (missingHistory.length) {
+      const { error } = await db.from("connecteam_staff_pay_rate_history").upsert(missingHistory, {
+        onConflict: "connecteam_user_id,effective_from",
+        ignoreDuplicates: true,
+      });
+      if (error) throw error;
+    }
+    const refreshedHistory = missingHistory.length
+      ? await db.from("connecteam_staff_pay_rate_history")
+          .select("connecteam_user_id,hourly_rate,effective_from")
+          .order("effective_from", { ascending: false })
+      : { data: historyRows, error: null };
+    if (refreshedHistory.error) throw refreshedHistory.error;
+
+    const rates = new Map((ratesAfterDefaults.data || []).map((item) => [item.connecteam_user_id, Number(item.hourly_rate)]));
+    const rateHistory = refreshedHistory.data || [];
     const rateForDate = (employeeId: string, date: string): number | null => {
       const effective = rateHistory.find((item) => item.connecteam_user_id === employeeId && item.effective_from <= date);
       return effective ? Number(effective.hourly_rate) : null;
@@ -136,7 +186,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Enter a valid employee and hourly rate." }, { status: 400 });
     }
     const db = createAdminClient();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Prague", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
     const [result, history] = await Promise.all([
       db.from("connecteam_staff_pay_rates").upsert({
         connecteam_user_id: employeeId,
