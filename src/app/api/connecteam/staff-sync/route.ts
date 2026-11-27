@@ -121,9 +121,14 @@ export async function GET(request: Request) {
   }
   try {
     credentials();
-    const today = localDate(Date.now() / 1000);
-    const startDate = addDays(today, -45);
-    const endDate = addDays(today, 90);
+    const requestedMonth = new URL(request.url).searchParams.get("month") || localDate(Date.now() / 1000).slice(0, 7);
+    if (!/^\\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth)) {
+      return NextResponse.json({ error: "Invalid month. Expected YYYY-MM." }, { status: 400 });
+    }
+    const [year, month] = requestedMonth.split("-").map(Number);
+    // Sync complete calendar months: previous month (comparison) + selected month.
+    const startDate = new Date(Date.UTC(year, month - 2, 1)).toISOString().slice(0, 10);
+    const endDate = new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
     const startTime = pragueMidnightEpoch(startDate);
     const endTime = pragueMidnightEpoch(addDays(endDate, 1)) - 1;
 
