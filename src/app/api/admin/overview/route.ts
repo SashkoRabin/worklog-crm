@@ -34,16 +34,23 @@ export async function GET(request: Request) {
     const month = new URL(request.url).searchParams.get("month") || new Date().toISOString().slice(0, 7);
     const bounds = monthBounds(month);
     const db = createAdminClient();
-    const [staffResult, shiftsResult, ratesResult] = await Promise.all([
+    const [staffResult, shiftsResult, ratesResult, rateHistoryResult] = await Promise.all([
       db.from("connecteam_staff_users").select("connecteam_user_id,first_name,last_name,is_archived,synced_at").order("first_name"),
       db.from("connecteam_staff_shifts").select("connecteam_shift_id,work_date,location,start_time,end_time,start_epoch,end_epoch,user_ids").gte("work_date", bounds.previousStart).lt("work_date", bounds.end).order("start_epoch"),
       db.from("connecteam_staff_pay_rates").select("connecteam_user_id,hourly_rate,updated_at"),
+      db.from("connecteam_staff_pay_rate_history").select("connecteam_user_id,hourly_rate,effective_from").order("effective_from", { ascending: false }),
     ]);
     if (staffResult.error) throw staffResult.error;
     if (shiftsResult.error) throw shiftsResult.error;
     if (ratesResult.error) throw ratesResult.error;
+    if (rateHistoryResult.error) throw rateHistoryResult.error;
 
     const rates = new Map((ratesResult.data || []).map((item) => [item.connecteam_user_id, Number(item.hourly_rate)]));
+    const rateHistory = rateHistoryResult.data || [];
+    const rateForDate = (employeeId: string, date: string) => {
+      const effective = rateHistory.find((item) => item.connecteam_user_id === employeeId && item.effective_from <= date);
+      return effective ? Number(effective.hourly_rate) : (rates.get(employeeId) || 0);
+    };
     const employees = (staffResult.data || []).map((person) => {
       const assigned = (shiftsResult.data || []).filter((shift) => (shift.user_ids || []).includes(person.connecteam_user_id));
       const decorate = (shift: typeof assigned[number]) => {
@@ -55,7 +62,7 @@ export async function GET(request: Request) {
           start: shift.start_time,
           end: shift.end_time,
           hours: Math.round(hours * 100) / 100,
-          earnings: Math.round(hours * (rates.get(person.connecteam_user_id) || 0) * 100) / 100,
+          earnings: Math.round(hours * rateForDate(person.connecteam_user_id, shift.work_date) * 100) / 100,
         };
       };
       const currentShifts = assigned.filter((shift) => shift.work_date >= bounds.start && shift.work_date < bounds.end).map(decorate);
@@ -109,12 +116,21 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Enter a valid employee and hourly rate." }, { status: 400 });
     }
     const db = createAdminClient();
-    const result = await db.from("connecteam_staff_pay_rates").upsert({
-      connecteam_user_id: employeeId,
-      hourly_rate: hourlyRate,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "connecteam_user_id" });
+    const today = new Date().toISOString().slice(0, 10);
+    const [result, history] = await Promise.all([
+      db.from("connecteam_staff_pay_rates").upsert({
+        connecteam_user_id: employeeId,
+        hourly_rate: hourlyRate,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "connecteam_user_id" }),
+      db.from("connecteam_staff_pay_rate_history").upsert({
+        connecteam_user_id: employeeId,
+        hourly_rate: hourlyRate,
+        effective_from: today,
+      }, { onConflict: "connecteam_user_id,effective_from" }),
+    ]);
     if (result.error) throw result.error;
+    if (history.error) throw history.error;
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Admin rate update failed", error);
