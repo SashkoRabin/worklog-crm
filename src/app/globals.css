@@ -3118,3 +3118,21 @@ h2 {
 @media(max-width:650px){.admin-analytics-grid{grid-template-columns:1fr}.admin-payroll-distribution{grid-column:auto}.admin-analytics-card{padding:14px}.admin-donut-wrap{justify-content:center}.admin-donut-wrap svg{max-width:155px}}
 
 .admin-brand-logo{width:36px;height:36px;flex:0 0 36px;display:block;object-fit:contain;border-radius:10px}.admin-theme-toggle{display:grid;place-items:center}.admin-nav button{transition:background .16s ease,color .16s ease,transform .16s ease}.admin-nav button:hover{transform:translateX(2px)}.admin-nav button.active{font-weight:750}.admin-nav button span{line-height:1.35}.admin-top-actions .admin-theme-toggle{margin-right:2px}[data-theme="dark"] .admin-theme-toggle{background:#252535;color:#e9dfff;border-color:var(--admin-line)}[data-theme="dark"] .admin-menu-button{background:#232333;color:#ddd;border-color:var(--admin-line)}[data-theme="dark"] .admin-chart-area{fill:#9b88ef;fill-opacity:.18}[data-theme="dark"] .admin-progress,[data-theme="dark"] .admin-weekday-track,[data-theme="dark"] .admin-employee-bar-main>span{background:#302f40}[data-theme="dark"] .admin-search{background:#232333}[data-theme="dark"] .admin-search input{color:var(--admin-text)}@media(max-width:700px){.admin-brand-logo{width:34px;height:34px;flex-basis:34px}}
+/* Collapsible day groups in shift lists */
+.admin-grouped-shifts{display:flex;flex-direction:column;gap:8px}
+.admin-shift-group-toolbar{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 8px;color:var(--admin-muted);font-size:10px}
+.admin-shift-group-toolbar button{border:1px solid var(--admin-line);background:var(--admin-card);color:var(--admin-text);border-radius:8px;padding:7px 11px;font-size:10px;font-weight:650;cursor:pointer}
+.admin-shift-group-toolbar button:hover{border-color:#8069e7;color:#8069e7}
+.admin-data-table{border-collapse:separate;border-spacing:0}
+.admin-shift-day .admin-shift-day-heading td{padding:0;border-bottom:1px solid var(--admin-line);background:var(--admin-card)}
+.admin-shift-day-toggle{width:100%;display:flex;align-items:center;gap:12px;text-align:left;padding:12px 10px;border:0;background:transparent;color:var(--admin-text);cursor:pointer;font:inherit}
+.admin-shift-day-toggle:hover{background:rgba(128,105,231,.07)}
+.admin-shift-chevron{display:inline-flex;width:18px;height:18px;align-items:center;justify-content:center;border-radius:5px;background:rgba(128,105,231,.12);color:#927df0;font-size:22px;line-height:12px;transform:rotate(0);transition:transform .16s ease}
+.admin-shift-chevron.is-expanded{transform:rotate(90deg)}
+.admin-shift-day-count{color:var(--admin-muted);font-size:10px}
+.admin-shift-day-summary{margin-left:auto;color:var(--admin-muted);font-size:10px;font-variant-numeric:tabular-nums}
+.admin-shift-day-toggle strong{min-width:92px;text-align:right;font-size:10px;font-variant-numeric:tabular-nums}
+.admin-shift-detail-row td{padding:10px 12px!important;background:var(--admin-card)!important}
+.admin-shift-detail-row td:first-child{padding-left:42px!important}
+.admin-shift-detail-row:hover td{background:rgba(128,105,231,.035)!important}
+@media(max-width:700px){.admin-shift-day-toggle{gap:7px;padding:11px 6px}.admin-shift-day-toggle strong{min-width:75px}.admin-shift-detail-row td:first-child{padding-left:24px!important}}
