@@ -292,6 +292,59 @@ function AnalyticsGrid({ shifts, employees }: {
 }
 
 function ShiftTable({ shifts }: { shifts: (Shift & { employee?: string })[] }) {
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(() => new Set());
+  const groups = useMemo(() => {
+    const map = new Map<string, (Shift & { employee?: string })[]>();
+    for (const shift of shifts) {
+      const list = map.get(shift.date) || [];
+      list.push(shift);
+      map.set(shift.date, list);
+    }
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [shifts]);
+  const allExpanded = groups.length > 0 && groups.every(([date]) => expandedDays.has(date));
+  function toggleAll() {
+    setExpandedDays(allExpanded ? new Set() : new Set(groups.map(([date]) => date)));
+  }
+  function toggleDay(date: string) {
+    setExpandedDays(current => {
+      const next = new Set(current);
+      if (next.has(date)) next.delete(date);
+      else next.add(date);
+      return next;
+    });
+  }
   if (!shifts.length) return <div className="admin-table-empty">No shifts found for this period.</div>;
-  return <div className="admin-table-wrap"><table className="admin-data-table"><thead><tr><th>Date</th><th>Employee</th><th>Location</th><th>Time</th><th>Hours</th><th>Estimated pay</th></tr></thead><tbody>{shifts.map((shift,index)=><tr key={shift.id+String(index)}><td>{new Date(shift.date+"T12:00:00").toLocaleDateString("en-GB",{day:"2-digit",month:"short"})}</td><td>{shift.employee||"—"}</td><td>{shift.location}</td><td>{shift.start}–{shift.end}</td><td>{number(shift.hours)} h</td><td>{money(shift.earnings)}</td></tr>)}</tbody></table></div>;
+  return <div className="admin-table-wrap admin-grouped-shifts">
+    <div className="admin-shift-group-toolbar">
+      <span>{groups.length} days · {shifts.length} shifts</span>
+      <button type="button" onClick={toggleAll}>{allExpanded ? "Collapse all days" : "Expand all days"}</button>
+    </div>
+    <table className="admin-data-table">
+      <thead><tr><th>Date</th><th>Employee</th><th>Location</th><th>Time</th><th>Hours</th><th>Estimated pay</th></tr></thead>
+      {groups.map(([date, dayShifts]) => {
+        const expanded = expandedDays.has(date);
+        const dayHours = dayShifts.reduce((sum, shift) => sum + shift.hours, 0);
+        const dayPayroll = dayShifts.every(shift => shift.earnings !== null)
+          ? dayShifts.reduce((sum, shift) => sum + (shift.earnings ?? 0), 0)
+          : null;
+        return <tbody key={date} className="admin-shift-day">
+          <tr className="admin-shift-day-heading">
+            <td colSpan={6}>
+              <button type="button" className="admin-shift-day-toggle" onClick={() => toggleDay(date)} aria-expanded={expanded}>
+                <span className={"admin-shift-chevron " + (expanded ? "is-expanded" : "")}>›</span>
+                <b>{new Date(date + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short" })}</b>
+                <span className="admin-shift-day-count">{dayShifts.length} {dayShifts.length === 1 ? "shift" : "shifts"}</span>
+                <span className="admin-shift-day-summary">{number(dayHours)} h</span>
+                <strong>{money(dayPayroll)}</strong>
+              </button>
+            </td>
+          </tr>
+          {expanded && dayShifts.map((shift, index) => <tr key={shift.id + String(index)} className="admin-shift-detail-row">
+            <td>{shift.date}</td><td>{shift.employee || "—"}</td><td>{shift.location}</td><td>{shift.start}–{shift.end}</td><td>{number(shift.hours)} h</td><td>{money(shift.earnings)}</td>
+          </tr>)}
+        </tbody>;
+      })}
+    </table>
+  </div>;
 }
