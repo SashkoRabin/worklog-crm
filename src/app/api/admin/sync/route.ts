@@ -65,7 +65,7 @@ async function connecteamGet<T>(path: string): Promise<T> {
 
 async function getAllUsers() {
   const users: ConnecteamUser[] = [];
-  for (let offset = 0; offset < 100_000; offset += PAGE_SIZE) {
+  for (let offset = 0; offset < 100_000;) {
     const result = await connecteamGet<ApiEnvelope<{ users?: ConnecteamUser[] }>>(
       `/users/v1/users?limit=${PAGE_SIZE}&offset=${offset}&userStatus=all`,
     );
@@ -92,7 +92,7 @@ async function getAllShifts(schedulerId: string | number, startTime: number, end
     const batch = result.data?.shifts || [];
     shifts.push(...batch);
     if (batch.length < PAGE_SIZE) break;
-    const next = nextOffset(result, offset, batch.length);
+    const next = nextOffset(result, offset);
     if (next <= offset) throw new Error("Connecteam shifts pagination did not advance.");
     offset = next;
   }
