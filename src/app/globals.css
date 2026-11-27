@@ -3052,3 +3052,32 @@ h2 {
 @media(max-width:700px){.admin-sidebar{position:fixed;left:0;top:0;bottom:0;height:100dvh;width:270px;transform:translateX(-105%);transition:transform .22s ease;box-shadow:15px 0 40px rgba(0,0,0,.18)}.admin-sidebar.is-open{transform:translateX(0)}.admin-mobile-close{display:grid;place-items:center;margin-left:auto;width:30px;height:30px;border:0;border-radius:8px;background:#292a40;color:#fff}.admin-mobile-overlay{display:block;position:fixed;inset:0;z-index:40;border:0;background:rgba(14,15,28,.45)}.admin-menu-button{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--admin-line);border-radius:9px;background:#fff;color:#77798d}.admin-topbar{height:74px;padding:0 14px;gap:10px}.admin-topbar h1{font-size:16px}.admin-live-dot{display:none}.admin-sync-button{height:34px;padding:0 9px;font-size:9px}.admin-icon-button{width:33px;height:33px}.admin-page-content{padding:19px 13px 38px}.admin-period{align-items:flex-start;gap:10px}.admin-period b{font-size:12px}.admin-period-controls input{width:105px}.admin-kpis{gap:8px}.admin-kpis article{min-height:122px;padding:12px}.admin-kpis article>strong{font-size:19px}.admin-kpis article>em{font-size:8px}.admin-card{padding:14px;margin-bottom:11px}.admin-card-title{align-items:flex-start;flex-wrap:wrap}.admin-card-title h2{font-size:12px}.admin-search{width:100%}.admin-search input{width:100%}.admin-employee-layout{grid-template-columns:1fr}.admin-directory{max-height:250px}.admin-payroll-hero{padding:18px}.admin-payroll-hero strong{font-size:23px}.admin-payroll-row{min-width:600px}.admin-setting-row{align-items:flex-start;flex-wrap:wrap}.admin-setting-row>div{min-width:calc(100% - 55px)}.admin-setting-row>.admin-primary-action,.admin-setting-row>.admin-secondary-action{margin-left:53px}.admin-footer{flex-direction:column}.admin-top-actions{gap:6px}}
 @media(prefers-reduced-motion:reduce){.admin-sidebar{transition:none}}
 [data-theme="dark"] .admin-app{--admin-bg:#12121b;--admin-card:#1c1c29;--admin-line:#343445;--admin-text:#f1eff8;--admin-muted:#a2a2b5;color:var(--admin-text)}[data-theme="dark"] .admin-topbar{background:#1a1a27;border-color:var(--admin-line)}[data-theme="dark"] .admin-period-controls,[data-theme="dark"] .admin-icon-button,[data-theme="dark"] .admin-secondary-action{background:#232333;color:#ddd;border-color:var(--admin-line)}[data-theme="dark"] .admin-period-controls input,[data-theme="dark"] .admin-rate-input input{color:#eee;background:#232333}[data-theme="dark"] .admin-directory>button,[data-theme="dark"] .admin-profile-metrics>div{background:#252535;color:#eee}[data-theme="dark"] .admin-directory>button.selected{background:#302849;border-color:#7665b4}[data-theme="dark"] .admin-employee-detail{border-color:var(--admin-line)}[data-theme="dark"] .admin-data-table td,[data-theme="dark"] .admin-payroll-row{border-color:#343445}[data-theme="dark"] .admin-payroll-row strong{color:#d3c8ff}[data-theme="dark"] .admin-notice{background:#1e382e;border-color:#315c49;color:#9ce4c5}[data-theme="dark"] .admin-error{background:#38272e;border-color:#65424a;color:#f1aab1}
+
+/* Admin analytics charts */
+.admin-chart-card{padding:20px 21px 15px;overflow:hidden}
+.admin-chart-heading{align-items:center;margin-bottom:12px}
+.admin-chart-switch{display:flex;gap:3px;padding:3px;border:1px solid var(--admin-line);border-radius:9px;background:#f7f7fb}
+.admin-chart-switch button{padding:7px 12px;border:0;border-radius:7px;background:transparent;color:#85889b;font-size:9px;font-weight:750;cursor:pointer}
+.admin-chart-switch button.active{background:#fff;color:#674fd0;box-shadow:0 1px 4px rgba(30,25,55,.1)}
+.admin-chart-summary{display:flex;align-items:flex-end;justify-content:space-between;gap:15px}
+.admin-chart-summary>div{display:grid;gap:5px}
+.admin-chart-summary small{font-size:9px;color:var(--admin-muted)}
+.admin-chart-summary strong{font-size:23px;letter-spacing:-.045em;font-variant-numeric:tabular-nums}
+.admin-chart-summary>span{font-size:9px;color:var(--admin-muted)}
+.admin-chart-summary>span b{margin-left:5px;color:var(--admin-text)}
+.admin-chart-plot{width:100%;height:205px;margin-top:7px}
+.admin-chart-plot svg{width:100%;height:100%;overflow:visible}
+.admin-chart-gridline{stroke:#ececf3;stroke-width:1;stroke-dasharray:3 5}
+.admin-chart-area{fill:#8d79eb;fill-opacity:.12}
+.admin-chart-line{fill:none;stroke:#8069e7;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.admin-chart-point{fill:#fff;stroke:#8069e7;stroke-width:2;cursor:pointer;vector-effect:non-scaling-stroke}
+.admin-chart-axis{fill:#a0a1b0;font-size:9px}
+.admin-chart-foot{display:flex;justify-content:space-between;gap:12px;padding-top:8px;border-top:1px solid var(--admin-line);color:var(--admin-muted);font-size:8px}
+.admin-chart-foot span:first-child{display:flex;align-items:center;gap:6px}
+.admin-chart-foot i{width:7px;height:7px;border-radius:50%;background:#8069e7}
+.admin-chart-empty{height:205px;display:grid;place-items:center;color:var(--admin-muted);font-size:10px}
+[data-theme="dark"] .admin-chart-switch{background:#252535}
+[data-theme="dark"] .admin-chart-switch button.active{background:#3a3450;color:#d7ceff}
+[data-theme="dark"] .admin-chart-gridline{stroke:#3a394b}
+[data-theme="dark"] .admin-chart-point{fill:#211f2d}
+@media(max-width:600px){.admin-chart-card{padding:14px}.admin-chart-plot{height:170px}.admin-chart-summary strong{font-size:19px}.admin-chart-foot{font-size:7px}}
