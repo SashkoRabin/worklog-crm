@@ -67,7 +67,24 @@ export default function AdminPage() {
     finally { setSavingRate(false); }
   }
 
-  async function syncConnecteam() {\n    setSyncing(true); setError(""); setSyncMessage("");\n    try {\n      const response = await fetch("/api/admin/sync", { method: "POST", credentials: "same-origin", cache: "no-store" });\n      const body = await response.json();\n      if (!response.ok) throw new Error(body.error || "Connecteam sync failed.");\n      setSyncMessage(`Synced ${body.employeesSynced} employees and ${body.shiftsSynced} shifts.\\u00a0`);\n      await load();\n    } catch (reason) { setError(reason instanceof Error ? reason.message : "Connecteam sync failed."); }\n    finally { setSyncing(false); }\n  }\n\n  const changeMonth = (delta: number) => {
+  async function syncConnecteam() {
+    setSyncing(true); setError(""); setSyncMessage("");
+    try {
+      const response = await fetch("/api/connecteam/staff-sync", {
+        method: "POST", credentials: "same-origin", cache: "no-store",
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Connecteam sync failed.");
+      setSyncMessage(`Synced ${body.users} employees and ${body.shifts} shifts.`);
+      await load();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Connecteam sync failed.");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  const changeMonth = (delta: number) => {
     const date = new Date(month + "-01T12:00:00");
     date.setMonth(date.getMonth() + delta);
     setMonth(date.toISOString().slice(0, 7));
