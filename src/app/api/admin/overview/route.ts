@@ -49,7 +49,7 @@ export async function GET(request: Request) {
     const rateHistory = rateHistoryResult.data || [];
     const rateForDate = (employeeId: string, date: string) => {
       const effective = rateHistory.find((item) => item.connecteam_user_id === employeeId && item.effective_from <= date);
-      return effective ? Number(effective.hourly_rate) : (rates.get(employeeId) || 0);
+      return effective ? Number(effective.hourly_rate) : 0;
     };
     const employees = (staffResult.data || []).map((person) => {
       const assigned = (shiftsResult.data || []).filter((shift) => (shift.user_ids || []).includes(person.connecteam_user_id));
