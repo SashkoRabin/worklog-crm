@@ -98,7 +98,7 @@ export async function GET(request: Request) {
       },
       source: "ConnectTeam scheduled shifts",
       generatedAt: new Date().toISOString(),
-    });
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("Admin overview failed", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to load admin overview." }, { status: 500 });
@@ -131,7 +131,7 @@ export async function PATCH(request: Request) {
     ]);
     if (result.error) throw result.error;
     if (history.error) throw history.error;
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("Admin rate update failed", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to save rate." }, { status: 500 });
