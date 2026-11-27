@@ -134,6 +134,7 @@ export default function AdminPage() {
               <article className="admin-kpi-pay"><span className="kpi-icon green"><Wallet size={18}/></span><small>Estimated payroll</small><strong>{money(data.summary.payroll)}</strong><em>Previous month {money(data.summary.previousPayroll)}</em></article>
             </section>
             <TrendChart shifts={allShifts} month={month} metric={chartMetric} onMetricChange={setChartMetric} />
+            <AnalyticsGrid shifts={allShifts} employees={activeEmployees} />
             <div className="admin-overview-grid"><section className="admin-card"><div className="admin-card-title"><div><h2>Team overview</h2><p>Employees ranked by scheduled hours</p></div><button onClick={()=>openSection("employees")}>View all <ArrowUpRight size={14}/></button></div><div className="admin-ranking">{[...activeEmployees].sort((a,b)=>b.current.hours-a.current.hours).slice(0,7).map((person,index)=><button key={person.id} onClick={()=>{setSelectedId(person.id);setSection("employees");}}><span className="admin-rank">{String(index+1).padStart(2,"0")}</span><span className="admin-rank-name"><b>{person.name}</b><small>{person.current.shifts} shifts</small></span><span className="admin-rank-hours"><b>{number(person.current.hours)} h</b><small>{money(person.current.earnings)}</small></span><span className="admin-progress"><i style={{width:`${Math.min(100,data.summary.hours?person.current.hours/data.summary.hours*100:0)}%`}}/></span></button>)}</div></section>
               <section className="admin-card admin-insight-card"><div className="admin-card-title"><div><h2>Payroll snapshot</h2><p>Estimated wages by current rates</p></div><Wallet size={18}/></div><strong>{money(data.summary.payroll)}</strong><span>Current period estimate</span><div className="admin-insight-divider"/><div><small>Previous period</small><b>{money(data.summary.previousPayroll)}</b></div><button onClick={()=>openSection("payroll")}>Open payroll <ArrowUpRight size={14}/></button></section></div>
             <section className="admin-card"><div className="admin-card-title"><div><h2>Recent shifts</h2><p>Latest scheduled shifts in selected month</p></div><button onClick={()=>openSection("shifts")}>All shifts <ArrowUpRight size={14}/></button></div><ShiftTable shifts={allShifts.slice(-8).reverse()}/></section>
@@ -201,6 +202,88 @@ function TrendChart({ shifts, month, metric, onMetricChange }: {
       </div> : <div className="admin-chart-empty">No shift data for this month yet.</div>}
       <div className="admin-chart-foot"><span><i/> {metric === "hours" ? "Scheduled hours" : "Estimated wages"}</span><span>Hover points for daily details</span></div>
     </section>
+  );
+}
+
+
+function AnalyticsGrid({ shifts, employees }: {
+  shifts: (Shift & { employee?: string; employeeId?: string })[];
+  employees: Employee[];
+}) {
+  const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const weekdayHours = weekdays.map((label, index) => ({
+    label,
+    hours: shifts.filter((shift) => {
+      const day = (new Date(shift.date + "T12:00:00").getDay() + 6) % 7;
+      return day === index;
+    }).reduce((sum, shift) => sum + shift.hours, 0),
+  }));
+  const maxWeekday = Math.max(1, ...weekdayHours.map((item) => item.hours));
+  const topEmployees = [...employees].sort((a, b) => b.current.hours - a.current.hours).slice(0, 6);
+  const maxEmployee = Math.max(1, ...topEmployees.map((item) => item.current.hours));
+  const payrollRows = [...employees]
+    .filter((person) => person.current.earnings > 0)
+    .sort((a, b) => b.current.earnings - a.current.earnings);
+  const payrollTotal = payrollRows.reduce((sum, person) => sum + person.current.earnings, 0);
+  const palette = ["#8069e7", "#4e9de8", "#f0a34b", "#40b99a", "#e27c9a", "#8b9bad"];
+  let accumulated = 0;
+  const slices = payrollRows.slice(0, 5).map((person, index) => {
+    const percent = payrollTotal ? person.current.earnings / payrollTotal * 100 : 0;
+    const start = accumulated;
+    accumulated += percent;
+    return { name: person.name, value: person.current.earnings, percent, start, color: palette[index] };
+  });
+  const rest = Math.max(0, 100 - accumulated);
+  if (rest > 0.01) slices.push({ name: "Others", value: Math.max(0, payrollTotal - slices.reduce((sum, item) => sum + item.value, 0)), percent: rest, start: accumulated, color: "#c5c9d4" });
+  const polar = (percent: number) => percent * 3.6;
+  const arc = (start: number, end: number) => {
+    const point = (angle: number) => {
+      const rad = (angle - 90) * Math.PI / 180;
+      return [100 + 76 * Math.cos(rad), 100 + 76 * Math.sin(rad)];
+    };
+    const a = point(polar(start));
+    const b = point(polar(end));
+    const large = end - start > 50 ? 1 : 0;
+    return "M " + a[0] + " " + a[1] + " A 76 76 0 " + large + " 1 " + b[0] + " " + b[1];
+  };
+  return (
+    <div className="admin-analytics-grid">
+      <section className="admin-card admin-analytics-card">
+        <div className="admin-card-title"><div><h2>Activity by weekday</h2><p>Scheduled hours across the week</p></div><span className="admin-chart-tag">Hours</span></div>
+        <div className="admin-weekday-chart">
+          {weekdayHours.map((item) => <div className="admin-weekday-column" key={item.label}>
+            <span className="admin-weekday-value">{number(item.hours)}</span>
+            <div className="admin-weekday-track"><i style={{height: (item.hours / maxWeekday * 100) + "%"}} /></div>
+            <small>{item.label}</small>
+          </div>)}
+        </div>
+        <div className="admin-chart-caption"><span>Most active day</span><b>{[...weekdayHours].sort((a,b)=>b.hours-a.hours)[0]?.label || "—"}</b></div>
+      </section>
+      <section className="admin-card admin-analytics-card">
+        <div className="admin-card-title"><div><h2>Top employees</h2><p>Team ranking by scheduled hours</p></div><span className="admin-chart-tag">Top 6</span></div>
+        <div className="admin-employee-bars">
+          {topEmployees.map((person,index)=><div className="admin-employee-bar-row" key={person.id}>
+            <span className="admin-employee-bar-rank">{index+1}</span>
+            <div className="admin-employee-bar-main"><div><b>{person.name}</b><small>{number(person.current.hours)} h</small></div><span><i style={{width:(person.current.hours/maxEmployee*100)+"%"}} /></span></div>
+          </div>)}
+          {!topEmployees.length&&<div className="admin-chart-empty">No employee activity yet.</div>}
+        </div>
+      </section>
+      <section className="admin-card admin-analytics-card admin-payroll-distribution">
+        <div className="admin-card-title"><div><h2>Payroll distribution</h2><p>Estimated wages by employee</p></div><span className="admin-chart-tag">CZK</span></div>
+        {payrollTotal > 0 ? <>
+          <div className="admin-donut-wrap">
+            <svg viewBox="0 0 200 200" role="img" aria-label="Payroll distribution by employee">
+              <circle cx="100" cy="100" r="76" fill="none" stroke="var(--admin-line)" strokeWidth="22"/>
+              {slices.map((slice,index)=><path key={slice.name} d={arc(slice.start,slice.start+slice.percent)} fill="none" stroke={slice.color} strokeWidth="22" strokeLinecap="butt"><title>{slice.name}: {money(slice.value)} ({number(slice.percent)}%)</title></path>)}
+              <text x="100" y="94" textAnchor="middle" className="admin-donut-total-label">TOTAL PAYROLL</text>
+              <text x="100" y="116" textAnchor="middle" className="admin-donut-total">{money(payrollTotal)}</text>
+            </svg>
+            <div className="admin-donut-legend">{slices.map(slice=><div key={slice.name}><i style={{background:slice.color}}/><span>{slice.name}</span><b>{number(slice.percent)}%</b></div>)}</div>
+          </div>
+        </> : <div className="admin-chart-empty">Payroll data is not available for this period.</div>}
+      </section>
+    </div>
   );
 }
 
