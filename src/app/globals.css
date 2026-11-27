@@ -3162,3 +3162,17 @@ h2 {
 [data-theme="dark"] .admin-rate-input input{background:#242433;border-color:#3a394b}
 @media(max-width:900px){.admin-employee-layout{grid-template-columns:minmax(260px,.8fr) minmax(0,1.2fr)}}
 @media(max-width:700px){.admin-employee-layout{grid-template-columns:1fr}.admin-directory{max-height:360px}.admin-employee-detail{padding:14px}}
+
+/* Employee directory initials must stay circular and fixed-size */
+.admin-directory>button>.admin-avatar{
+  display:grid!important;place-items:center;
+  width:40px!important;min-width:40px!important;max-width:40px!important;
+  height:40px!important;min-height:40px!important;max-height:40px!important;
+  flex:0 0 40px!important;flex-shrink:0!important;align-self:center;
+  aspect-ratio:1/1;border-radius:50%!important;padding:0!important;
+  line-height:1;font-size:11px;
+}
+.admin-directory>button>.admin-directory-person{flex:1 1 auto;min-width:0}
+.admin-directory>button>.admin-directory-rank{flex:0 0 19px}
+.admin-directory>button>strong{flex:0 0 auto}
+@media(max-width:700px){.admin-directory>button>.admin-avatar{width:36px!important;min-width:36px!important;max-width:36px!important;height:36px!important;min-height:36px!important;max-height:36px!important;flex-basis:36px!important}}
